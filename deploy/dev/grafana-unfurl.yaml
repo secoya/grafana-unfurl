@@ -1,0 +1,25 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-unfurl
+spec:
+  template:
+    spec:
+      containers:
+      - name: grafana-unfurl
+        volumeMounts:
+        - name: grafana-unfurl
+          mountPath: /grafana-unfurl
+        - name: yarn-cache
+          mountPath: /usr/local/share/.cache/yarn
+        - name: temp
+          mountPath: /tmp
+      volumes:
+      - name: grafana-unfurl
+        hostPath:
+          path: /hosthome/aim/Workspace/operations/apps/grafana-unfurl
+      - name: yarn-cache
+        emptyDir: {}
+      - name: temp
+        emptyDir: {}

@@ -1,0 +1,20 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-unfurl
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: development-ca
+spec:
+  tls:
+  - hosts: [grafana-unfurl.kube]
+    secretName: grafana-unfurl-kube-tls
+  rules:
+  - host: grafana-unfurl.kube
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: grafana-unfurl
+          servicePort: 3000
