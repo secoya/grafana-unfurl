@@ -1,0 +1,24 @@
+---
+  apiVersion: networking.k8s.io/v1beta1
+  kind: Ingress
+  metadata:
+    name: grafana-unfurl
+    annotations:
+      ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-production
+  spec:
+    tls:
+    - hosts: [unfurl.example.org]
+      secretName: unfurl-example-org-tls
+    rules:
+    - host: unfurl.example.org
+      http:
+        paths:
+        - path: /grafana-unfurl/api/slack/actions
+          backend:
+            serviceName: grafana-unfurl
+            servicePort: 3000
+        - path: /grafana-unfurl/api/slack/events
+          backend:
+            serviceName: grafana-unfurl
+            servicePort: 3000

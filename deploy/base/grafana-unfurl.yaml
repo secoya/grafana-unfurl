@@ -1,0 +1,45 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: grafana-unfurl
+  labels:
+    app.kubernetes.io/component: grafana-unfurl
+spec:
+  selector:
+    app.kubernetes.io/component: grafana-unfurl
+  ports:
+  - name: web
+    port: 3000
+  - name: metrics
+    port: 3001
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grafana-unfurl
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: grafana-unfurl
+  endpoints:
+  - port: metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-unfurl
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: grafana-unfurl
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: grafana-unfurl
+    spec:
+      containers:
+      - name: grafana-unfurl
+        image: secoya/grafana-unfurl
+        securityContext:
+          readOnlyRootFilesystem: true

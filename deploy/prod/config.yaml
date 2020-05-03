@@ -1,0 +1,22 @@
+url: https://ops.example.org/grafana-unfurl
+logLevel: debug
+logFormat: text
+
+s3:
+  bucket: grafana-unfurl
+  root: production/
+
+grafana:
+  url: http://grafana
+  matchUrl: https://ops.example.org/graphs
+  retention: 30d
+  cleanupInterval: 1d
+  render:
+    height: 500
+    width: 1000
+
+slack:
+  botToken: null
+  clientId: null
+  clientSecret: null
+  clientSigningSecret: null
