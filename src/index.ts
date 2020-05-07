@@ -3,6 +3,7 @@ import { docopt } from 'docopt';
 import * as express from 'express';
 import { createServer } from 'http';
 import * as sourceMapSupport from 'source-map-support';
+import { setupListener as setupApiListener } from './api';
 import { loadConfig, maskSensitiveConfig } from './config';
 import { Context } from './context';
 import { setupCleanup } from './grafana/cache';
@@ -38,7 +39,7 @@ async function main(shutdown: ShutdownOptions) {
 	if (params['--log-format'] !== null && !(params['--log-format'] in LogFormat)) {
 		throw new Error(`FORMAT must be one of ${Object.keys(LogFormat)}`);
 	}
-	const config = await loadConfig(params['--config'], shutdown);
+	const config = await loadConfig(params['--config']);
 	setLogLevel(params['--log-level'] !== null ? params['--log-level'] : config.logLevel);
 	setLogFormat(params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
 	log.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
@@ -56,6 +57,7 @@ async function main(shutdown: ShutdownOptions) {
 
 	setupCleanup(context, shutdown);
 	setupSlackListeners(context, app);
+	setupApiListener(context, app);
 	log.info('startup complete');
 }
 

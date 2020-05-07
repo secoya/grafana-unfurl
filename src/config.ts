@@ -1,6 +1,4 @@
-import { ShutdownOptions } from '@secoya/shutdown-manager';
 import { readFile } from 'fs';
-import { watch } from 'fs';
 import { cloneDeep, merge } from 'lodash';
 import { URL } from 'url';
 import * as yaml from 'yaml';
@@ -77,10 +75,11 @@ export type Config = RequiredRecursive<ConfigFileBase> &
 		webserverPaths: {
 			slackEvents: string;
 			slackActions: string;
+			cacheRequests: string;
 		};
 	};
 
-export async function loadConfig(configPath: string, shutdown: ShutdownOptions): Promise<Config> {
+export async function loadConfig(configPath: string): Promise<Config> {
 	const validateConfig = getValidator<ConfigFile>(configFileSchema);
 	const configData: string = await new Promise(async (resolve, reject) => {
 		readFile(configPath, (err, data) => {
@@ -122,6 +121,7 @@ export async function loadConfig(configPath: string, shutdown: ShutdownOptions):
 		webserverPaths: {
 			slackEvents: new URL('api/slack/events', parsedURLs.url).pathname,
 			slackActions: new URL('api/slack/actions', parsedURLs.url).pathname,
+			cacheRequests: new URL('api/cache', parsedURLs.url).pathname,
 		},
 	};
 	const mergedConfig = merge(defaults, jsonConfig, parsedURLs, staticConfig);
@@ -136,10 +136,6 @@ export async function loadConfig(configPath: string, shutdown: ShutdownOptions):
 			root: mergedConfig.s3.root.replace(/^\//g, '').replace(/([^/])$/, '$1/'),
 		},
 	};
-	const fsWatcher = watch(configPath, () => {
-		shutdown.shutdown('Configuration has changed');
-	});
-	shutdown.handlers.push(fsWatcher.close.bind(fsWatcher));
 	return merge(mergedConfig, parsedDurations, pathFixes);
 }
 

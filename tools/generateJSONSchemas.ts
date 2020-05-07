@@ -11,7 +11,13 @@ Usage:
 Note:
 	[<symbols>...] default to the built-in symbolList if none are given`;
 
-export const symbolList = ['ConfigFile', 'LinkShareEvent', 'InteractionPayload', 'GrafanaAPIDashboardResponse'];
+export const symbolList = [
+	'ConfigFile',
+	'LinkShareEvent',
+	'InteractionPayload',
+	'GrafanaAPIDashboardResponse',
+	'CacheRequestPayload',
+];
 
 export async function generateSchemas(
 	output: string,
