@@ -3,10 +3,8 @@ import * as express from 'express';
 import * as cacheRequestPayloadSchema from './artifacts/schemas/CacheRequestPayload.json';
 import { Context } from './context';
 import { errorHandler } from './errors';
-import { getDashboard } from './grafana/api';
 import { createImage } from './grafana/cache';
 import { parseUrl } from './grafana/url';
-import { log } from './log';
 import { getValidator } from './utils';
 
 interface CacheRequestPayload {

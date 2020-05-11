@@ -10,10 +10,13 @@ RUN yarn install --frozen-lockfile
 COPY tsconfig.json tslint.json /build/
 COPY tools/ /build/tools/
 
-COPY src/ /build/src/
+RUN mkdir -p src/artifacts/schemas
+COPY src/*.ts /build/src/
+COPY src/grafana /build/src/grafana
 
 ENV NODE_ENV=production
 
+RUN tools/generateJSONSchemas.ts src/artifacts/schemas tsconfig.json
 RUN tslint -p tsconfig.json
 RUN tsc -p tsconfig.json
 RUN mv dist /artifacts/
