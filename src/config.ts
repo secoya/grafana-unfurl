@@ -34,6 +34,10 @@ interface ConfigFileBase {
 		};
 	};
 	s3?: {
+		urlSigning: {
+			accessKeyId: string;
+			secretAccessKey: string;
+		};
 		bucket: string;
 		root?: string;
 	};
