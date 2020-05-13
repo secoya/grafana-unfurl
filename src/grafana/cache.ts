@@ -9,7 +9,7 @@ import { log } from '../log';
 import { getPanelImageUrl, GrafanaPanelUrl } from './url';
 
 export async function createImage(context: Context, urlParts: GrafanaPanelUrl): Promise<URL> {
-	const { config, s3 } = context;
+	const { config, s3, s3UrlSigning } = context;
 	const imageUrl = getPanelImageUrl(context, urlParts);
 	log.debug(`Caching ${imageUrl}`);
 	const image = await request({
@@ -41,7 +41,7 @@ export async function createImage(context: Context, urlParts: GrafanaPanelUrl): 
 		);
 	});
 	const s3url = await (new Promise((resolve, reject) => {
-		s3.getSignedUrl(
+		s3UrlSigning.getSignedUrl(
 			'getObject',
 			{
 				Bucket: config.s3.bucket,

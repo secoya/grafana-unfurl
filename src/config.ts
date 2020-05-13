@@ -23,6 +23,11 @@ export function maskSensitiveConfig(config: Config): any {
 	return masked;
 }
 
+interface AWSCreds {
+	accessKeyId: string;
+	secretAccessKey: string;
+}
+
 interface ConfigFileBase {
 	logFormat?: LogFormat;
 	logLevel?: LogLevel;
@@ -34,6 +39,7 @@ interface ConfigFileBase {
 		};
 	};
 	s3?: {
+		urlSigning: AWSCreds;
 		bucket: string;
 		root?: string;
 	};
@@ -46,10 +52,7 @@ interface ConfigFileBase {
 }
 
 interface ConfigFileBaseOptionals {
-	s3?: {
-		accessKeyId?: string;
-		secretAccessKey?: string;
-	};
+	s3?: AWSCreds | { accessKeyId: undefined; secretAccessKey: undefined };
 }
 
 export type ConfigFile = ConfigFileBase &

@@ -5,6 +5,9 @@ logFormat: text
 s3:
   bucket: grafana-unfurl
   root: production/
+  urlSigning:
+    accessKeyId: AKIAABCDEFGHIJKLMNOP
+    secretAccessKey: abcefghijklmn//ABCDEF1234567890ABCDefghi
 
 grafana:
   url: http://grafana
