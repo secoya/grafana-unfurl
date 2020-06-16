@@ -8,7 +8,6 @@ spec:
     spec:
       containers:
       - name: grafana-unfurl
-        image: secoya/grafana-unfurl
         resources:
           requests:
             memory: 100Mi
