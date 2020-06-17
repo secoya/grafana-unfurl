@@ -40,6 +40,6 @@ spec:
     spec:
       containers:
       - name: grafana-unfurl
-        image: cr.orbit.dev/grafana-unfurl
+        image: cr.orbit.dev/ops/grafana-unfurl
         securityContext:
           readOnlyRootFilesystem: true
