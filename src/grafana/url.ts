@@ -23,10 +23,10 @@ export interface GrafanaPanelUrl extends GrafanaUrl {
 	readonly panelId: number;
 }
 
-const knownParameters = ['orgId', 'refresh', 'from', 'to', 'panelId', 'fullscreen', 'theme'];
+const knownParameters = ['orgId', 'refresh', 'from', 'to', 'panelId', 'fullscreen', 'theme', 'tz'];
 export function parseUrl({ config }: Context, rawUrl: string): GrafanaDashboardUrl | GrafanaPanelUrl | null {
 	if (!rawUrl.startsWith(config.grafana.matchUrl.toString())) {
-		log.debug(`URL ${rawUrl} does not match ${config.grafana.matchUrl}, skipping`);
+		log.warn(`URL ${rawUrl} does not match ${config.grafana.matchUrl}, skipping`);
 		return null;
 	}
 	const graphUrl = new URL(rawUrl);
