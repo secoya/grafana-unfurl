@@ -5,7 +5,8 @@
 	"main": "dist/index.js",
 	"license": "UNLICENSED",
 	"scripts": {
-		"schemas": "tools/generateJSONSchemas.ts src/artifacts/schemas tsconfig.json"
+		"schemas": "tools/generateJSONSchemas.ts src/artifacts/schemas tsconfig.json",
+		"push-latest": "docker build --file deploy/prod/Dockerfile --tag cr.orbit.dev/ops/grafana-unfurl:latest . && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
 	},
 	"dependencies": {
 		"@secoya/shutdown-manager": "^0.0.8",

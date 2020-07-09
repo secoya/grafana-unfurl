@@ -23,7 +23,7 @@ export interface GrafanaPanelUrl extends GrafanaUrl {
 	readonly panelId: number;
 }
 
-const knownParameters = ['orgId', 'refresh', 'from', 'to', 'panelId', 'fullscreen', 'theme', 'tz'];
+const knownParameters = ['orgId', 'refresh', 'from', 'to', 'viewPanel', 'fullscreen', 'theme', 'tz'];
 export function parseUrl({ config }: Context, rawUrl: string): GrafanaDashboardUrl | GrafanaPanelUrl | null {
 	if (!rawUrl.startsWith(config.grafana.matchUrl.toString())) {
 		log.warn(`URL ${rawUrl} does not match ${config.grafana.matchUrl}, skipping`);
@@ -57,7 +57,7 @@ export function parseUrl({ config }: Context, rawUrl: string): GrafanaDashboardU
 			variables[key] = value;
 		}
 	}
-	const panelId = graphUrl.searchParams.get('panelId');
+	const panelId = graphUrl.searchParams.get('viewPanel');
 	const orgId = graphUrl.searchParams.get('orgId');
 	if (orgId == null) {
 		throw new Error(`No orgId found in graphURL ${graphUrl}`);
@@ -80,7 +80,7 @@ export function parseUrl({ config }: Context, rawUrl: string): GrafanaDashboardU
 export function getPanelImageUrl({ config }: Context, url: GrafanaPanelUrl): URL {
 	const graphImageUrl = new URL(`render/d-solo/${url.dashboardUid}/${url.dashboardName}`, config.grafana.url);
 	graphImageUrl.searchParams.append('orgId', url.orgId.toString());
-	graphImageUrl.searchParams.append('panelId', url.panelId.toString());
+	graphImageUrl.searchParams.append('viewPanel', url.panelId.toString());
 	graphImageUrl.searchParams.append('fullscreen', '1');
 	graphImageUrl.searchParams.append('theme', 'light');
 	if (url.from) {
