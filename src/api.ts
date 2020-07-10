@@ -34,7 +34,7 @@ export function setupListener(context: Context, app: express.Express) {
 				if (!url) {
 					throw new Error('Unable to parse URL or it does not match the configured matcher');
 				}
-				if (!('viewPanel' in url)) {
+				if (!('panelId' in url)) {
 					throw new Error('The URL does not link to a specific panel ID');
 				}
 				const cacheUrl = await createImage(context, url);
