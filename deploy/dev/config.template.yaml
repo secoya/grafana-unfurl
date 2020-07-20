@@ -1,0 +1,27 @@
+url: https://grafana-unfurl.local/
+logLevel: debug
+logFormat: text
+
+s3:
+  bucket: grafana-unfurl
+  root: development/
+  accessKeyId: AKIAABCDEFGHIJKLMNOP
+  secretAccessKey: abcefghijklmn//ABCDEF1234567890ABCDefghi
+  urlSigning:
+    accessKeyId: AKIAABCDEFGHIJKLMNOP
+    secretAccessKey: abcefghijklmn//ABCDEF1234567890ABCDefghi
+
+grafana:
+  url: http://grafana
+  matchUrl: https://grafana.local/graphs
+  retention: 30d
+  cleanupInterval: 1d
+  render:
+    height: 500
+    width: 1000
+
+slack:
+  botToken: null
+  clientId: null
+  clientSecret: null
+  clientSigningSecret: null

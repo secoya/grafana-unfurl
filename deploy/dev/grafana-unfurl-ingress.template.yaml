@@ -8,10 +8,10 @@ metadata:
     cert-manager.io/cluster-issuer: development-ca
 spec:
   tls:
-  - hosts: [grafana-unfurl.kube]
-    secretName: grafana-unfurl-kube-tls
+  - hosts: [grafana-unfurl.local]
+    secretName: grafana-unfurl-local-tls
   rules:
-  - host: grafana-unfurl.kube
+  - host: grafana-unfurl.local
     http:
       paths:
       - path: /

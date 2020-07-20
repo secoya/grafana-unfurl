@@ -8,6 +8,7 @@ spec:
     spec:
       containers:
       - name: grafana-unfurl
+        image: localhost:32000/ops/grafana-unfurl
         volumeMounts:
         - name: grafana-unfurl
           mountPath: /grafana-unfurl
@@ -18,7 +19,7 @@ spec:
       volumes:
       - name: grafana-unfurl
         hostPath:
-          path: /hosthome/aim/Workspace/operations/apps/grafana-unfurl
+          path: /home/aim/Workspace/operations/apps/grafana-unfurl
       - name: yarn-cache
         emptyDir: {}
       - name: temp
