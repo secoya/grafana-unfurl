@@ -14,6 +14,8 @@ export function maskSensitiveConfig(config: Config): any {
 	const masked = cloneDeep(config);
 	masked.s3.accessKeyId = maskIfDefined(masked.s3.accessKeyId);
 	masked.s3.secretAccessKey = maskIfDefined(masked.s3.secretAccessKey);
+	masked.s3.urlSigning.accessKeyId = maskIfDefined(masked.s3.urlSigning.accessKeyId);
+	masked.s3.urlSigning.secretAccessKey = maskIfDefined(masked.s3.urlSigning.secretAccessKey);
 	masked.slack.botToken = maskIfDefined(masked.slack.botToken);
 	masked.slack.clientId = maskIfDefined(masked.slack.clientId);
 	masked.slack.clientSecret = maskIfDefined(masked.slack.clientSecret);
