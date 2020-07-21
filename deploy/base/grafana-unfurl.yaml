@@ -43,6 +43,13 @@ spec:
         image: cr.orbit.dev/ops/grafana-unfurl
         securityContext:
           readOnlyRootFilesystem: true
+        ports:
+        - name: web
+          containerPort: 3000
+        - name: metrics
+          containerPort: 3001
+        - name: probes
+          containerPort: 3002
         env:
           - name: JAEGER_AGENT_HOST
             valueFrom:

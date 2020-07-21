@@ -8,6 +8,21 @@ spec:
     spec:
       containers:
       - name: grafana-unfurl
+        startupProbe:
+          httpGet:
+            initialDelaySeconds: 2
+            path: /-/initialized
+            port: probes
+        livenessProbe:
+          httpGet:
+            initialDelaySeconds: 5
+            path: /-/healthy
+            port: probes
+        readinessProbe:
+          httpGet:
+            initialDelaySeconds: 10
+            path: /-/ready
+            port: probes
         resources:
           requests:
             memory: 100Mi

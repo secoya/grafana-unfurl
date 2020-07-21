@@ -1,3 +1,5 @@
+import { setupMetrics } from '@secoya/metrics-helpers';
+import { setupKubernetesProbeResponders } from '@secoya/probes-helpers';
 import { startup, ShutdownOptions } from '@secoya/shutdown-manager';
 import { newSpan, setupTracing, TraceContext } from '@secoya/tracing-helpers';
 import { docopt } from 'docopt';
@@ -11,7 +13,6 @@ import { loadConfig, maskSensitiveConfig } from './config';
 import { initializeContext } from './context';
 import { setupCleanup } from './grafana/cache';
 import { log, setLogFormat, setLogLevel, LogFormat, LogLevel } from './log';
-import { setupMetrics } from './metrics';
 import { setupListeners as setupSlackListeners } from './slack';
 import { filteredMiddleware } from './utils';
 
@@ -50,7 +51,9 @@ async function main(shutdown: ShutdownOptions) {
 
 	setupTracing(shutdown, 'grafana-unfurl', log, log.level === LogLevel.DEBUG);
 	await newSpan(async function initialize({ span }: TraceContext) {
-		await setupMetrics();
+		const { healthy, ready } = await setupKubernetesProbeResponders(shutdown);
+		healthy(true);
+		await setupMetrics(shutdown, 'grafana-unfurl');
 		const app = express();
 		app.use(filteredMiddleware({ exclude: ['/assets'] }, opentracingMiddleware({ tracer: globalTracer() })));
 		const server = createServer(app);
@@ -65,6 +68,7 @@ async function main(shutdown: ShutdownOptions) {
 		await Promise.all(
 			[setupCleanup, setupSlackListeners, setupApiListener].map((fn) => initContext.childSpan(fn)()),
 		);
+		ready(true);
 		log.info('startup complete');
 	})();
 }
