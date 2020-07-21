@@ -1,4 +1,5 @@
 import { ShutdownOptions } from '@secoya/shutdown-manager';
+import { assertHasSpan, createTraceContext, newSpan, TraceContext } from '@secoya/tracing-helpers';
 import { WebClient as SlackClient } from '@slack/web-api';
 import * as S3 from 'aws-sdk/clients/s3';
 import * as express from 'express';
@@ -6,7 +7,6 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { Server } from 'http';
 import { Span } from 'opentracing';
 import { Config } from './config';
-import { assertHasSpan, createTraceContext, newSpan, TraceContext } from './tracing';
 
 export interface ConfigContext {
 	readonly config: Config;

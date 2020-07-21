@@ -1,9 +1,10 @@
 import { startup, ShutdownOptions } from '@secoya/shutdown-manager';
+import { newSpan, setupTracing, TraceContext } from '@secoya/tracing-helpers';
 import { docopt } from 'docopt';
 import * as express from 'express';
 import opentracingMiddleware from 'express-opentracing';
 import { createServer } from 'http';
-import { globalTracer, Span } from 'opentracing';
+import { globalTracer } from 'opentracing';
 import * as sourceMapSupport from 'source-map-support';
 import { setupListener as setupApiListener } from './api';
 import { loadConfig, maskSensitiveConfig } from './config';
@@ -12,7 +13,6 @@ import { setupCleanup } from './grafana/cache';
 import { log, setLogFormat, setLogLevel, LogFormat, LogLevel } from './log';
 import { setupMetrics } from './metrics';
 import { setupListeners as setupSlackListeners } from './slack';
-import { newSpan, setupTracing, TraceContext } from './tracing';
 import { filteredMiddleware } from './utils';
 
 sourceMapSupport.install();

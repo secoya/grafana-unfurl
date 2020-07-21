@@ -39,6 +39,17 @@
   dependencies:
     "@types/node" "10.17.4"
 
+"@secoya/tracing-helpers@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@secoya/tracing-helpers/-/tracing-helpers-0.0.2.tgz#5d6d57faa2d438a49789e1e2b1b1a8aa54bde5c0"
+  integrity sha512-4wt6rMaQ92Ftg7LGinb439fXWQVSOKEUGnOObW+Sg63uCDeb1nn9SZ8J6zf8DsC5UoER0ucRRamxP7Ok9hRruw==
+  dependencies:
+    "@secoya/shutdown-manager" "^0.0.8"
+    jaeger-client "^3.18.0"
+    opentracing "^0.14.4"
+    source-map-support "^0.5.16"
+    tslib "^1.10.0"
+
 "@secoya/typescript-scope-analysis@1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@secoya/typescript-scope-analysis/-/typescript-scope-analysis-1.0.4.tgz#2e9a31c79826590fc67e32be8ae4ffc2e951eb98"
