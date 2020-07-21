@@ -1,15 +1,19 @@
 import { startup, ShutdownOptions } from '@secoya/shutdown-manager';
 import { docopt } from 'docopt';
 import * as express from 'express';
+import opentracingMiddleware from 'express-opentracing';
 import { createServer } from 'http';
+import { globalTracer, Span } from 'opentracing';
 import * as sourceMapSupport from 'source-map-support';
 import { setupListener as setupApiListener } from './api';
 import { loadConfig, maskSensitiveConfig } from './config';
-import { Context } from './context';
+import { initializeContext } from './context';
 import { setupCleanup } from './grafana/cache';
 import { log, setLogFormat, setLogLevel, LogFormat, LogLevel } from './log';
 import { setupMetrics } from './metrics';
 import { setupListeners as setupSlackListeners } from './slack';
+import { newSpan, setupTracing, TraceContext } from './tracing';
+import { filteredMiddleware } from './utils';
 
 sourceMapSupport.install();
 
@@ -44,21 +48,25 @@ async function main(shutdown: ShutdownOptions) {
 	setLogFormat(params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
 	log.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
 
-	await setupMetrics();
-	const app = express();
-	const server = createServer(app);
-	await new Promise<void>((resolve) => {
-		server.listen(3000, () => {
-			shutdown.handlers.push(server.close.bind(server));
-			resolve();
+	setupTracing(shutdown, 'grafana-unfurl', log, log.level === LogLevel.DEBUG);
+	await newSpan(async function initialize({ span }: TraceContext) {
+		await setupMetrics();
+		const app = express();
+		app.use(filteredMiddleware({ exclude: ['/assets'] }, opentracingMiddleware({ tracer: globalTracer() })));
+		const server = createServer(app);
+		await new Promise<void>((resolve) => {
+			server.listen(3000, () => {
+				shutdown.handlers.push(server.close.bind(server));
+				resolve();
+			});
 		});
-	});
-	const context = new Context(config);
-
-	setupCleanup(context, shutdown);
-	setupSlackListeners(context, app);
-	setupApiListener(context, app);
-	log.info('startup complete');
+		const initContext = initializeContext({ config, app, server, shutdown, span });
+		app.use(filteredMiddleware({ exclude: ['/assets'] }, initContext.requestContextMiddleware));
+		await Promise.all(
+			[setupCleanup, setupSlackListeners, setupApiListener].map((fn) => initContext.childSpan(fn)()),
+		);
+		log.info('startup complete');
+	})();
 }
 
 startup(main, log);

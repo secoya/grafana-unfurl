@@ -1,7 +1,7 @@
 import * as request from 'request-promise-native';
 import { URL } from 'url';
 import * as grafanaAPIDashboardResponseSchema from '../artifacts/schemas/GrafanaAPIDashboardResponse.json';
-import { Context } from '../context';
+import { RuntimeContext } from '../context';
 import { getValidator } from '../utils';
 import { GrafanaUrl } from './url';
 
@@ -23,7 +23,7 @@ const validateGrafanaAPIDashboardResponse = getValidator<GrafanaAPIDashboardResp
 	grafanaAPIDashboardResponseSchema,
 );
 
-export async function getDashboard({ config }: Context, url: GrafanaUrl): Promise<GrafanaDashboard> {
+export async function getDashboard({ config }: RuntimeContext, url: GrafanaUrl): Promise<GrafanaDashboard> {
 	const apiUrl = new URL(`api/dashboards/uid/${url.dashboardUid}`, config.grafana.url);
 	const data = await request({
 		json: true,

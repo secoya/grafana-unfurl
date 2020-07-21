@@ -1,45 +1,51 @@
-import { ShutdownOptions } from '@secoya/shutdown-manager';
 import * as S3 from 'aws-sdk/clients/s3';
 import { AWSError } from 'aws-sdk/lib/error';
 import { addSeconds, format, isBefore, subSeconds } from 'date-fns';
+import { globalTracer, FORMAT_HTTP_HEADERS } from 'opentracing';
 import * as request from 'request-promise-native';
 import { URL } from 'url';
-import { Context } from '../context';
+import { InitializationContext, RuntimeContext } from '../context';
 import { log } from '../log';
 import { getPanelImageUrl, GrafanaPanelUrl } from './url';
 
-export async function createImage(context: Context, urlParts: GrafanaPanelUrl): Promise<URL> {
-	const { config, s3, s3UrlSigning } = context;
+export async function createImage(context: RuntimeContext, urlParts: GrafanaPanelUrl): Promise<URL> {
+	const { config, s3, s3UrlSigning, childSpan } = context;
 	const imageUrl = getPanelImageUrl(context, urlParts);
 	log.debug(`Caching ${imageUrl}`);
-	const image = await request({
-		encoding: null,
-		followRedirect: false,
-		headers: config.grafana.headers,
-		method: 'GET',
-		uri: imageUrl.toString(),
-	});
+	const image = await childSpan(function downloadImage({ span }) {
+		const headers = { ...config.grafana.headers };
+		globalTracer().inject(span, FORMAT_HTTP_HEADERS, headers);
+		return request({
+			encoding: null,
+			followRedirect: false,
+			headers,
+			method: 'GET',
+			uri: imageUrl.toString(),
+		});
+	})();
 	const now = new Date();
 	const key = format(now, 'yyyyMMddHHmmssSSS');
 	const cachedGraphImagePath = `${config.s3.root}${key}.png`;
-	await new Promise((resolve, reject) => {
-		s3.upload(
-			{
-				Body: image,
-				Bucket: config.s3.bucket,
-				ContentType: 'image/png',
-				Expires: addSeconds(now, config.grafana.retention),
-				Key: cachedGraphImagePath,
-			},
-			(err: Error, data: S3.ManagedUpload.SendData) => {
-				if (err) {
-					reject(err);
-				} else {
-					resolve(data);
-				}
-			},
-		);
-	});
+	await childSpan(function uploadImage() {
+		return new Promise((resolve, reject) => {
+			s3.upload(
+				{
+					Body: image,
+					Bucket: config.s3.bucket,
+					ContentType: 'image/png',
+					Expires: addSeconds(now, config.grafana.retention),
+					Key: cachedGraphImagePath,
+				},
+				(err: Error, data: S3.ManagedUpload.SendData) => {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(data);
+					}
+				},
+			);
+		});
+	})();
 	const s3url = await (new Promise((resolve, reject) => {
 		s3UrlSigning.getSignedUrl(
 			'getObject',
@@ -60,28 +66,35 @@ export async function createImage(context: Context, urlParts: GrafanaPanelUrl): 
 	return new URL(s3url);
 }
 
-export async function setupCleanup(context: Context, shutdown: ShutdownOptions): Promise<void> {
-	const { config } = context;
+export async function setupCleanup({
+	config,
+	shutdown,
+	invokeWithIntervalContext,
+}: InitializationContext): Promise<void> {
 	let cleanupInProgress = false;
 	let interval: NodeJS.Timeout;
-	interval = setInterval(async () => {
-		try {
-			if (cleanupInProgress) {
-				log.warn('Cleanup already in progress, not starting another one.');
-			}
-			cleanupInProgress = true;
-			await deleteExpiredImages(context);
-		} catch (e) {
-			log.error(e);
-		} finally {
-			cleanupInProgress = false;
-		}
-	}, config.grafana.cleanupInterval * 1000);
+	interval = setInterval(
+		async () =>
+			invokeWithIntervalContext(async (context) => {
+				try {
+					if (cleanupInProgress) {
+						log.warn('Cleanup already in progress, not starting another one.');
+					}
+					cleanupInProgress = true;
+					await deleteExpiredImages(context);
+				} catch (e) {
+					log.error(e);
+				} finally {
+					cleanupInProgress = false;
+				}
+			}),
+		config.grafana.cleanupInterval * 1000,
+	);
 	shutdown.handlers.push(() => clearInterval(interval));
 	log.verbose('cleanup setup complete');
 }
 
-async function deleteExpiredImages(context: Context): Promise<void> {
+async function deleteExpiredImages(context: RuntimeContext): Promise<void> {
 	const { config, s3 } = context;
 	const now = new Date();
 	const expireCutoff = subSeconds(now, config.grafana.retention);

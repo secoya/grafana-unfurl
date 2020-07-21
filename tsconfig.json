@@ -3,7 +3,6 @@
 		"target": "es2017",
 		"module": "commonjs",
 		"lib": ["es2017"],
-		"baseUrl": ".",
 		"outDir": "./dist",
 		"jsx": "react",
 		"importHelpers": true,
@@ -16,10 +15,11 @@
 		"noUnusedParameters": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"moduleResolution": "Node",
+		"moduleResolution": "node",
+		"baseUrl": ".",
 		"paths": {
-			"src/*": ["./src/*"]
+			"*": ["typings/packages/*.d.ts"]
 		}
 	},
-	"include": ["src/**/*.ts"]
+	"include": ["src/index.ts", "typings/includes/*.d.ts"]
 }

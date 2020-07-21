@@ -43,3 +43,11 @@ spec:
         image: cr.orbit.dev/ops/grafana-unfurl
         securityContext:
           readOnlyRootFilesystem: true
+        env:
+          - name: JAEGER_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: JAEGER_AGENT_PORT
+            value: '6832'
+
