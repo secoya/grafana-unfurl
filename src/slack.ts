@@ -3,42 +3,50 @@ import SlackEventAdapter from '@slack/events-api/dist/adapter';
 import { createMessageAdapter } from '@slack/interactive-messages';
 import { LinkUnfurls } from '@slack/web-api';
 import { EventEmitter } from 'events';
-import * as express from 'express';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AllHtmlEntities } from 'html-entities';
 import * as interactionPayloadSchema from './artifacts/schemas/InteractionPayload.json';
 import * as linkShareEventSchema from './artifacts/schemas/LinkShareEvent.json';
-import { assertHasRequestContext, InitializationContext } from './context';
+import { assertHasRequestContext, InitializationContext, RequestContext } from './context';
 import { errorHandler } from './errors';
 import { unfurlGrafanaUrl } from './grafana/slack';
-import { log } from './log';
 import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from './slack-payloads';
 import { getValidator } from './utils';
 
 const validateLinkShareEvent = getValidator<LinkShareEvent>(linkShareEventSchema);
 const validateInteractionPayload = getValidator<InteractionPayload>(interactionPayloadSchema);
 
-export async function setupListeners({ config, app }: InitializationContext) {
+export async function setupListeners({ config, app, rootLog, log }: InitializationContext) {
 	const events = createEventAdapter(config.slack.clientSigningSecret) as SlackEventAdapter & EventEmitter;
 	const interactions = createMessageAdapter(config.slack.clientSigningSecret);
-	const [eventsLeapfrog, getEventReq] = getLeapfrogRequestMiddleware((body: { event_ts: string }) => body.event_ts);
-	const [interactionsLeapfrog, getInteractionReq] = getLeapfrogRequestMiddleware(
+	const [eventsLeapfrog, getEventContext] = getLeapfrogRequestMiddleware(
+		(body: { event_ts: string }) => body.event_ts,
+	);
+	const [interactionsLeapfrog, getInteractionContext] = getLeapfrogRequestMiddleware(
 		(body: { trigger_id: string }) => body.trigger_id,
 	);
-	app.post(config.webserverPaths.slackEvents, eventsLeapfrog, events.requestListener(), errorHandler);
-	app.post(config.webserverPaths.slackActions, interactionsLeapfrog, interactions.requestListener(), errorHandler);
-	events.on('link_shared', async (event: LinkShareEvent) => handleLinks(event, getEventReq(event.event_ts)));
+	app.post(config.webserverPaths.slackEvents, eventsLeapfrog, events.requestListener(), errorHandler(rootLog));
+	app.post(
+		config.webserverPaths.slackActions,
+		interactionsLeapfrog,
+		interactions.requestListener(),
+		errorHandler(rootLog),
+	);
+	events.on('link_shared', async (event: LinkShareEvent) => handleLinks(getEventContext(event.event_ts), event));
 	interactions.action({ actionId: 'panel_select' }, (payload: InteractionPayload, respond: InteractionRespond) =>
-		handlePanelSelection(payload, respond, getInteractionReq(payload.trigger_id)),
+		handlePanelSelection(getInteractionContext(payload.trigger_id), payload, respond),
 	);
 	interactions.action(
 		{ actionId: 'panel_select_remove' },
-		(payload: InteractionPayload, respond: InteractionRespond) => handlePanelSelectorRemoval(payload, respond),
+		(payload: InteractionPayload, respond: InteractionRespond) =>
+			handlePanelSelectorRemoval(getInteractionContext(payload.trigger_id), payload, respond),
 	);
 	log.verbose('slack event listener setup completed');
 }
 
-function getLeapfrogRequestMiddleware(getKey: (body: any) => string): [RequestHandler, (key: string) => Request] {
+function getLeapfrogRequestMiddleware(
+	getKey: (body: any) => string,
+): [RequestHandler, (key: string) => RequestContext, (key: string) => Request] {
 	// This is one hell of an ugly hack
 	// The way both the events and interactions API in the Slack node SDK is structured prevents us
 	// from passing any information from a middleware to the event listeners, like the original http request or even a trace-id.
@@ -61,22 +69,28 @@ function getLeapfrogRequestMiddleware(getKey: (body: any) => string): [RequestHa
 	}
 	// Retrieving the request immediately removes it from the map
 	function retrieveRequest(key: string) {
+		if (!requests[key]) {
+			throw new Error(`LeapfrogReq: Unable to find request for key ${key}`);
+		}
 		const [req, timeout] = requests[key];
 		delete requests[key];
 		clearTimeout(timeout);
 		return req;
 	}
-	return [middleware, retrieveRequest];
+	function retrieveContext(key: string): RequestContext {
+		const req = retrieveRequest(key);
+		assertHasRequestContext(req);
+		return req.context;
+	}
+	return [middleware, retrieveContext, retrieveRequest];
 }
 
 interface PanelPrompt extends MessageReference {
 	encodedUrl: string;
 }
 const panelPrompts: { [key: string]: PanelPrompt | undefined } = {};
-async function handleLinks(event: LinkShareEvent, req: Request): Promise<void> {
+async function handleLinks({ childSpan, slack, log }: RequestContext, event: LinkShareEvent): Promise<void> {
 	try {
-		assertHasRequestContext(req);
-		const { childSpan, slack } = req.context;
 		log.debug('Link shared event received', { linkShare: event });
 		if (!validateLinkShareEvent(event)) {
 			log.error(
@@ -123,15 +137,17 @@ async function handleLinks(event: LinkShareEvent, req: Request): Promise<void> {
 	}
 }
 
-function handlePanelSelection(payload: InteractionPayload, respond: InteractionRespond, req: Request): false {
+function handlePanelSelection(
+	{ childSpan, slack, log }: RequestContext,
+	payload: InteractionPayload,
+	respond: InteractionRespond,
+): false {
 	// Interaction handling is super weird and buggy, this entire piece of code is just a big WAT
 	// https://github.com/slackapi/node-slack-sdk/blob/7fbd46ced68879f3678ed1927bb0440ab3471477/packages/interactive-messages/src/adapter.ts#L399-L454
 	// So we skip the entire callback/promise resolve code by returning false immediately
 	(async () => {
-		assertHasRequestContext(req);
-		const { childSpan, slack } = req.context;
-		log.debug('Panel selection payload received', { payload });
 		try {
+			log.debug('Panel selection payload received', { payload });
 			if (!validateInteractionPayload(payload)) {
 				throw new Error(
 					`Unable to validate interaction payload, errors were: ${JSON.stringify(
@@ -192,7 +208,11 @@ function handlePanelSelection(payload: InteractionPayload, respond: InteractionR
 	return false;
 }
 
-function handlePanelSelectorRemoval(payload: InteractionPayload, respond: InteractionRespond): false {
+function handlePanelSelectorRemoval(
+	{ log }: RequestContext,
+	payload: InteractionPayload,
+	respond: InteractionRespond,
+): false {
 	(async () => {
 		log.debug('Panel selection payload received', { payload });
 		try {

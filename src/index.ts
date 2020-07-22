@@ -1,3 +1,11 @@
+import {
+	createLogContext,
+	createRootLogger,
+	setLogFormat,
+	setLogLevel,
+	LogFormat,
+	LogLevel,
+} from '@secoya/log-helpers';
 import { setupMetrics } from '@secoya/metrics-helpers';
 import { setupKubernetesProbeResponders } from '@secoya/probes-helpers';
 import { startup, ShutdownOptions } from '@secoya/shutdown-manager';
@@ -12,7 +20,6 @@ import { setupListener as setupApiListener } from './api';
 import { loadConfig, maskSensitiveConfig } from './config';
 import { initializeContext } from './context';
 import { setupCleanup } from './grafana/cache';
-import { log, setLogFormat, setLogLevel, LogFormat, LogLevel } from './log';
 import { setupListeners as setupSlackListeners } from './slack';
 import { filteredMiddleware } from './utils';
 
@@ -36,6 +43,7 @@ Options:
                        Valid levels are ${Object.keys(LogLevel)}
   --log-format=FORMAT  Set log format (${Object.keys(LogFormat)}) (default: json)`;
 
+const rootLog = createRootLogger();
 async function main(shutdown: ShutdownOptions) {
 	const params: Parameters = docopt(doc, {});
 	if (params['--log-level'] !== null && !(params['--log-level'] in LogLevel)) {
@@ -45,15 +53,16 @@ async function main(shutdown: ShutdownOptions) {
 		throw new Error(`FORMAT must be one of ${Object.keys(LogFormat)}`);
 	}
 	const config = await loadConfig(params['--config']);
-	setLogLevel(params['--log-level'] !== null ? params['--log-level'] : config.logLevel);
-	setLogFormat(params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
-	log.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
+	setLogLevel(rootLog, params['--log-level'] !== null ? params['--log-level'] : config.logLevel);
+	setLogFormat(rootLog, params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
+	rootLog.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
 
-	setupTracing(shutdown, 'grafana-unfurl', log, log.level === LogLevel.DEBUG);
+	setupTracing(shutdown, 'grafana-unfurl', rootLog);
 	await newSpan(async function initialize({ span }: TraceContext) {
 		const { healthy, ready } = await setupKubernetesProbeResponders(shutdown);
 		healthy(true);
 		await setupMetrics(shutdown, 'grafana-unfurl');
+		const { log } = createLogContext(rootLog, span);
 		const app = express();
 		app.use(filteredMiddleware({ exclude: ['/assets'] }, opentracingMiddleware({ tracer: globalTracer() })));
 		const server = createServer(app);
@@ -63,7 +72,7 @@ async function main(shutdown: ShutdownOptions) {
 				resolve();
 			});
 		});
-		const initContext = initializeContext({ config, app, server, shutdown, span });
+		const initContext = initializeContext({ config, app, server, shutdown, span, rootLog, log });
 		app.use(filteredMiddleware({ exclude: ['/assets'] }, initContext.requestContextMiddleware));
 		await Promise.all(
 			[setupCleanup, setupSlackListeners, setupApiListener].map((fn) => initContext.childSpan(fn)()),
@@ -73,4 +82,4 @@ async function main(shutdown: ShutdownOptions) {
 	})();
 }
 
-startup(main, log);
+startup(main, rootLog);

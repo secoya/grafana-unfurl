@@ -9,6 +9,7 @@
 		"push-latest": "docker build --file deploy/prod/Dockerfile --tag cr.orbit.dev/ops/grafana-unfurl:latest . && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
 	},
 	"dependencies": {
+		"@secoya/log-helpers": "^0.0.3",
 		"@secoya/metrics-helpers": "^0.0.1",
 		"@secoya/probes-helpers": "^0.0.1",
 		"@secoya/shutdown-manager": "^0.0.8",

@@ -15,7 +15,7 @@ interface CacheRequestResponse {
 }
 const validateCacheRequestPayload = getValidator<CacheRequestPayload>(cacheRequestPayloadSchema);
 
-export function setupListener({ app, config }: InitializationContext) {
+export function setupListener({ app, config, rootLog }: InitializationContext) {
 	app.post(
 		config.webserverPaths.cacheRequests,
 		bodyParser.json({ limit: '10mb' }),
@@ -46,6 +46,6 @@ export function setupListener({ app, config }: InitializationContext) {
 				next(e);
 			}
 		},
-		errorHandler,
+		errorHandler(rootLog),
 	);
 }

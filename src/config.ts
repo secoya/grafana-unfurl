@@ -1,9 +1,9 @@
+import { LogFormat, LogLevel } from '@secoya/log-helpers';
 import { readFile } from 'fs';
 import { cloneDeep, merge } from 'lodash';
 import { URL } from 'url';
 import * as yaml from 'yaml';
 import * as configFileSchema from './artifacts/schemas/ConfigFile.json';
-import { LogFormat, LogLevel } from './log';
 import { RequiredRecursive } from './utils';
 import { getValidator } from './utils';
 

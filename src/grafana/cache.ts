@@ -5,11 +5,10 @@ import { globalTracer, FORMAT_HTTP_HEADERS } from 'opentracing';
 import * as request from 'request-promise-native';
 import { URL } from 'url';
 import { InitializationContext, RuntimeContext } from '../context';
-import { log } from '../log';
 import { getPanelImageUrl, GrafanaPanelUrl } from './url';
 
 export async function createImage(context: RuntimeContext, urlParts: GrafanaPanelUrl): Promise<URL> {
-	const { config, s3, s3UrlSigning, childSpan } = context;
+	const { config, s3, s3UrlSigning, childSpan, log } = context;
 	const imageUrl = getPanelImageUrl(context, urlParts);
 	log.debug(`Caching ${imageUrl}`);
 	const image = await childSpan(function downloadImage({ span }) {
@@ -70,20 +69,22 @@ export async function setupCleanup({
 	config,
 	shutdown,
 	invokeWithIntervalContext,
+	log,
 }: InitializationContext): Promise<void> {
 	let cleanupInProgress = false;
 	let interval: NodeJS.Timeout;
 	interval = setInterval(
 		async () =>
 			invokeWithIntervalContext(async (context) => {
+				const { log: intvLog } = context;
 				try {
 					if (cleanupInProgress) {
-						log.warn('Cleanup already in progress, not starting another one.');
+						intvLog.warn('Cleanup already in progress, not starting another one.');
 					}
 					cleanupInProgress = true;
 					await deleteExpiredImages(context);
 				} catch (e) {
-					log.error(e);
+					intvLog.error(e);
 				} finally {
 					cleanupInProgress = false;
 				}
@@ -95,7 +96,7 @@ export async function setupCleanup({
 }
 
 async function deleteExpiredImages(context: RuntimeContext): Promise<void> {
-	const { config, s3 } = context;
+	const { config, s3, log } = context;
 	const now = new Date();
 	const expireCutoff = subSeconds(now, config.grafana.retention);
 	const objects = await new Promise<S3.ListObjectsOutput>((resolve, reject) =>

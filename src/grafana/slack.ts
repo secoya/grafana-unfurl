@@ -2,7 +2,6 @@ import { ActionsBlock, ImageBlock, MessageAttachment, Option, SectionBlock, Stat
 import * as crypto from 'crypto';
 import { URL } from 'url';
 import { RuntimeContext } from '../context';
-import { log } from '../log';
 import { getDashboard, GrafanaDashboard } from './api';
 import { createImage } from './cache';
 import { parseUrl } from './url';
@@ -17,6 +16,7 @@ export async function unfurlGrafanaUrl(
 	rawUrl: string,
 	panelId?: number,
 ): Promise<[MessageAttachment, null] | [null, PanelPrompt] | [null, null]> {
+	const { log } = context;
 	const url = parseUrl(context, rawUrl);
 	if (url === null) {
 		return [null, null];

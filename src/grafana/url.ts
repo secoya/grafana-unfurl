@@ -1,6 +1,5 @@
 import { URL } from 'url';
 import { RuntimeContext } from '../context';
-import { log } from '../log';
 
 export interface GrafanaUrl {
 	readonly basePath: string;
@@ -24,7 +23,10 @@ export interface GrafanaPanelUrl extends GrafanaUrl {
 }
 
 const knownParameters = ['orgId', 'refresh', 'from', 'to', 'viewPanel', 'panelId', 'theme', 'tz'];
-export function parseUrl({ config }: RuntimeContext, rawUrl: string): GrafanaDashboardUrl | GrafanaPanelUrl | null {
+export function parseUrl(
+	{ config, log }: RuntimeContext,
+	rawUrl: string,
+): GrafanaDashboardUrl | GrafanaPanelUrl | null {
 	if (!rawUrl.startsWith(config.grafana.matchUrl.toString())) {
 		log.warn(`URL ${rawUrl} does not match ${config.grafana.matchUrl}, skipping`);
 		return null;
