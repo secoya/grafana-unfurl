@@ -51,10 +51,7 @@ spec:
         - name: probes
           containerPort: 3002
         env:
-          - name: JAEGER_AGENT_HOST
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
-          - name: JAEGER_AGENT_PORT
-            value: '6832'
-
+        - name: JAEGER_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP

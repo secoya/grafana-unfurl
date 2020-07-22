@@ -57,7 +57,7 @@ async function main(shutdown: ShutdownOptions) {
 	setLogFormat(rootLog, params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
 	rootLog.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
 
-	setupTracing(shutdown, 'grafana-unfurl', rootLog);
+	setupTracing({ shutdown, log: rootLog }, 'grafana-unfurl');
 	await newSpan(async function initialize({ span }: TraceContext) {
 		const { healthy, ready } = await setupKubernetesProbeResponders(shutdown);
 		healthy(true);
