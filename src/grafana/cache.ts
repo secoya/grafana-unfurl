@@ -76,7 +76,7 @@ export async function setupCleanup({
 	interval = setInterval(
 		async () =>
 			invokeWithIntervalContext(async (context) => {
-				const { log: intvLog } = context;
+				const { log: intvLog, span } = context;
 				try {
 					if (cleanupInProgress) {
 						intvLog.warn('Cleanup already in progress, not starting another one.');
@@ -84,6 +84,9 @@ export async function setupCleanup({
 					cleanupInProgress = true;
 					await deleteExpiredImages(context);
 				} catch (e) {
+					span.log({ stack: e.stack });
+					span.setTag('error', true);
+					span.setTag('sampling.priority', 1);
 					intvLog.error(e);
 				} finally {
 					cleanupInProgress = false;
