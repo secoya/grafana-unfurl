@@ -9,18 +9,18 @@ spec:
       containers:
       - name: grafana-unfurl
         startupProbe:
+          initialDelaySeconds: 2
           httpGet:
-            initialDelaySeconds: 2
             path: /-/initialized
             port: probes
         livenessProbe:
+          initialDelaySeconds: 5
           httpGet:
-            initialDelaySeconds: 5
             path: /-/healthy
             port: probes
         readinessProbe:
+          initialDelaySeconds: 10
           httpGet:
-            initialDelaySeconds: 10
             path: /-/ready
             port: probes
         resources:
