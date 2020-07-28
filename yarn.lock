@@ -32,10 +32,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@secoya/log-helpers@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@secoya/log-helpers/-/log-helpers-0.0.3.tgz#6b8bda764fd7656383ad67d08b14e11bd3da68c3"
-  integrity sha512-7JXDNOjmnngaI52tNe3mEfyFwnItWvy7g80wcRnRgmL1xDzrnheoTs8yxqRZMjOVSm1/wUcaNDgXfZQlgew5xA==
+"@secoya/log-helpers@^0.0.7":
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/@secoya/log-helpers/-/log-helpers-0.0.7.tgz#55eb2a5461b74cf022b3084366cc1d25ae9a5482"
+  integrity sha512-tDPPJ8J0/LP5Xj4ANkoWUANvJ/igIM5P+7nwxkSioP7/v3E+4FpE0+Pkt1RXwCSXNd1vs7Ng1ImDUV5zWpSmtg==
   dependencies:
     "@secoya/shutdown-manager" "^0.0.8"
     opentracing "^0.14.4"
