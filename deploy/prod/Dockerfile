@@ -11,6 +11,7 @@ COPY tsconfig.json tslint.json /build/
 COPY tools/ /build/tools/
 
 RUN mkdir -p src/artifacts/schemas
+COPY typings /build/typings/
 COPY src/*.ts /build/src/
 COPY src/grafana /build/src/grafana
 
