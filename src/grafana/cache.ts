@@ -11,17 +11,22 @@ export async function createImage(context: RuntimeContext, urlParts: GrafanaPane
 	const { config, s3, s3UrlSigning, childSpan, log } = context;
 	const imageUrl = getPanelImageUrl(context, urlParts);
 	log.debug(`Caching ${imageUrl}`);
-	const image = await childSpan(function downloadImage({ span }) {
-		const headers = { ...config.grafana.headers };
-		globalTracer().inject(span, FORMAT_HTTP_HEADERS, headers);
-		return request({
-			encoding: null,
-			followRedirect: false,
-			headers,
-			method: 'GET',
-			uri: imageUrl.toString(),
-		});
-	})();
+	let image: Buffer;
+	try {
+		image = await childSpan(function downloadImage({ span }): Promise<Buffer> {
+			const headers = { ...config.grafana.headers };
+			globalTracer().inject(span, FORMAT_HTTP_HEADERS, headers);
+			return request({
+				encoding: null,
+				followRedirect: false,
+				headers,
+				method: 'GET',
+				uri: imageUrl.toString(),
+			});
+		})();
+	} catch (e) {
+		throw new Error(`Grafana returned an error when rendering ${imageUrl}: ${e.toString().substr(0, 30)}...`);
+	}
 	const now = new Date();
 	const key = format(now, 'yyyyMMddHHmmssSSS');
 	const cachedGraphImagePath = `${config.s3.root}${key}.png`;
