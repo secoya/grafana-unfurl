@@ -7,7 +7,6 @@ import { docopt } from 'docopt';
 import * as express from 'express';
 import opentracingMiddleware from 'express-opentracing';
 import { createServer } from 'http';
-import { globalTracer } from 'opentracing';
 import * as sourceMapSupport from 'source-map-support';
 import { setupListener as setupApiListener } from './api';
 import { loadConfig, maskSensitiveConfig } from './config';
@@ -50,14 +49,14 @@ async function main(shutdown: ShutdownOptions) {
 	setLogFormat(rootLog, params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
 	rootLog.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
 
-	const { newSpan } = setupTracing({ shutdown, log: rootLog }, 'grafana-unfurl');
+	const { newSpan, tracer } = setupTracing({ shutdown, log: rootLog }, 'grafana-unfurl');
 	await newSpan(async function initialize({ span }: TraceContext) {
 		const { healthy, ready } = await setupKubernetesProbeResponders(shutdown);
 		healthy(true);
 		await setupMetrics(shutdown, 'grafana-unfurl');
 		const { log } = createLogContext(rootLog, span);
 		const app = express();
-		app.use(filteredMiddleware({ exclude: ['/assets'] }, opentracingMiddleware({ tracer: globalTracer() })));
+		app.use(filteredMiddleware({ exclude: ['/assets'] }, opentracingMiddleware({ tracer })));
 		const server = createServer(app);
 		await new Promise<void>((resolve) => {
 			server.listen(3000, () => {

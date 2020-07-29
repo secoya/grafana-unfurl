@@ -73,10 +73,10 @@
   dependencies:
     "@types/node" "10.17.4"
 
-"@secoya/tracing-helpers@^0.0.7":
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/@secoya/tracing-helpers/-/tracing-helpers-0.0.7.tgz#49ec5dc07190e1e1208b22862fdf9efe73262b0f"
-  integrity sha512-rjxgbts7YuAIQ4yjqZmPEMGXUaSw3k6zC1jAkxIz9I5xClMmJ9WVdCE/IJT1xIaV0d4uFWArXBsdrdzoIv3kJg==
+"@secoya/tracing-helpers@^0.0.8":
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/@secoya/tracing-helpers/-/tracing-helpers-0.0.8.tgz#2a984ecee0bce4036d920608ed19269d877008ec"
+  integrity sha512-ExEXIkr/hpnBDJrj4/9Bsh3dMvNrzOttePJQshhNaMbRNlwbOI1ESjt0lbAnAOJtz9TgSesoTIVydMIB9/lbMw==
   dependencies:
     "@secoya/shutdown-manager" "^0.0.8"
     jaeger-client "^3.18.0"
