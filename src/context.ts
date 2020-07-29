@@ -1,6 +1,6 @@
 import { Logger, LogContext } from '@secoya/log-helpers';
 import { ShutdownOptions } from '@secoya/shutdown-manager';
-import { assertHasSpan, createTraceContext, newSpan, TraceContext } from '@secoya/tracing-helpers';
+import { assertHasSpan, createTraceContext, SpanWrapper, TraceContext } from '@secoya/tracing-helpers';
 import { WebClient as SlackClient } from '@slack/web-api';
 import * as S3 from 'aws-sdk/clients/s3';
 import * as express from 'express';
@@ -42,6 +42,7 @@ export function initializeContext(init: {
 	rootLog: Logger;
 	log: Logger;
 	span: Span;
+	newSpan: SpanWrapper;
 }): InitializationContext {
 	return createInitContext({
 		config: init.config,
@@ -60,6 +61,7 @@ export function initializeContext(init: {
 		rootLog: init.rootLog,
 		log: init.log,
 		span: init.span,
+		newSpan: init.newSpan,
 	});
 }
 
@@ -69,6 +71,7 @@ interface SetupContext extends ConfigContext, SlackContext, S3Context, LogContex
 	shutdown: ShutdownOptions;
 	rootLog: Logger;
 	span: Span;
+	newSpan: SpanWrapper;
 }
 function createInitContext(setupContext: SetupContext): InitializationContext {
 	const createContext = (child: Span) => createInitContext({ ...setupContext, span: child });
@@ -97,7 +100,7 @@ function createIntervalContext(setupContext: SetupContext & SlackContext & S3Con
 function createInvokeWithIntervalContext(setupContext: SetupContext) {
 	return {
 		invokeWithIntervalContext: (jobFn: (context: IntervalContext) => Promise<void>): Promise<void> =>
-			newSpan(
+			setupContext.newSpan(
 				({ span }: TraceContext) => jobFn(createIntervalContext(setupContext, span)),
 				`interval: ${jobFn.name}`,
 			)(),

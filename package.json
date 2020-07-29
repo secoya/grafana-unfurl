@@ -9,11 +9,11 @@
 		"push-latest": "docker build --file deploy/prod/Dockerfile --tag cr.orbit.dev/ops/grafana-unfurl:latest . && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
 	},
 	"dependencies": {
-		"@secoya/log-helpers": "^0.0.7",
+		"@secoya/log-helpers": "^0.0.8",
 		"@secoya/metrics-helpers": "^0.0.1",
 		"@secoya/probes-helpers": "^0.0.1",
 		"@secoya/shutdown-manager": "^0.0.8",
-		"@secoya/tracing-helpers": "^0.0.5",
+		"@secoya/tracing-helpers": "^0.0.7",
 		"@slack/events-api": "^2.3.2",
 		"@slack/interactive-messages": "^1.5.0",
 		"@slack/web-api": "^5.8.0",

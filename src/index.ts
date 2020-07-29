@@ -1,15 +1,8 @@
-import {
-	createLogContext,
-	createRootLogger,
-	setLogFormat,
-	setLogLevel,
-	LogFormat,
-	LogLevel,
-} from '@secoya/log-helpers';
+import { createLogContext, setupLogging, setLogFormat, setLogLevel, LogFormat, LogLevel } from '@secoya/log-helpers';
 import { setupMetrics } from '@secoya/metrics-helpers';
 import { setupKubernetesProbeResponders } from '@secoya/probes-helpers';
 import { startup, ShutdownOptions } from '@secoya/shutdown-manager';
-import { newSpan, setupTracing, TraceContext } from '@secoya/tracing-helpers';
+import { setupTracing, TraceContext } from '@secoya/tracing-helpers';
 import { docopt } from 'docopt';
 import * as express from 'express';
 import opentracingMiddleware from 'express-opentracing';
@@ -43,7 +36,7 @@ Options:
                        Valid levels are ${Object.keys(LogLevel)}
   --log-format=FORMAT  Set log format (${Object.keys(LogFormat)}) (default: json)`;
 
-const rootLog = createRootLogger();
+const rootLog = setupLogging();
 async function main(shutdown: ShutdownOptions) {
 	const params: Parameters = docopt(doc, {});
 	if (params['--log-level'] !== null && !(params['--log-level'] in LogLevel)) {
@@ -57,7 +50,7 @@ async function main(shutdown: ShutdownOptions) {
 	setLogFormat(rootLog, params['--log-format'] !== null ? params['--log-format'] : config.logFormat);
 	rootLog.debug(`Configuration loaded: ${JSON.stringify(maskSensitiveConfig(config), null, 2)}`);
 
-	setupTracing({ shutdown, log: rootLog }, 'grafana-unfurl');
+	const { newSpan } = setupTracing({ shutdown, log: rootLog }, 'grafana-unfurl');
 	await newSpan(async function initialize({ span }: TraceContext) {
 		const { healthy, ready } = await setupKubernetesProbeResponders(shutdown);
 		healthy(true);
@@ -72,7 +65,7 @@ async function main(shutdown: ShutdownOptions) {
 				resolve();
 			});
 		});
-		const initContext = initializeContext({ config, app, server, shutdown, span, rootLog, log });
+		const initContext = initializeContext({ config, app, server, shutdown, span, newSpan, rootLog, log });
 		app.use(filteredMiddleware({ exclude: ['/assets'] }, initContext.requestContextMiddleware));
 		await Promise.all(
 			[setupCleanup, setupSlackListeners, setupApiListener].map((fn) => initContext.childSpan(fn)()),

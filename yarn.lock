@@ -32,10 +32,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@secoya/log-helpers@^0.0.7":
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/@secoya/log-helpers/-/log-helpers-0.0.7.tgz#55eb2a5461b74cf022b3084366cc1d25ae9a5482"
-  integrity sha512-tDPPJ8J0/LP5Xj4ANkoWUANvJ/igIM5P+7nwxkSioP7/v3E+4FpE0+Pkt1RXwCSXNd1vs7Ng1ImDUV5zWpSmtg==
+"@secoya/log-helpers@^0.0.8":
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/@secoya/log-helpers/-/log-helpers-0.0.8.tgz#6b9052b865f7ea168093bc46761672b88f06d87e"
+  integrity sha512-sR+icNqMg7hmRc1G0IE4e3owtj/oR0lmhN/kYpI4fwakPv9n7vwLKD/Fj3JSKS0DGdej0id9xvL2TeGfiTh4xg==
   dependencies:
     "@secoya/shutdown-manager" "^0.0.8"
     opentracing "^0.14.4"
@@ -73,10 +73,10 @@
   dependencies:
     "@types/node" "10.17.4"
 
-"@secoya/tracing-helpers@^0.0.5":
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/@secoya/tracing-helpers/-/tracing-helpers-0.0.5.tgz#7845adf3c1920a5c902879fdf5efeeddabc9ec49"
-  integrity sha512-PrTejaWqt7+ulGS8TOQSBtRQIxN2CJ50fdf/x02nJC85D73Y7IWXsUdb42ogv7odQ38dB/t6KWmTNW11wOIujw==
+"@secoya/tracing-helpers@^0.0.7":
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/@secoya/tracing-helpers/-/tracing-helpers-0.0.7.tgz#49ec5dc07190e1e1208b22862fdf9efe73262b0f"
+  integrity sha512-rjxgbts7YuAIQ4yjqZmPEMGXUaSw3k6zC1jAkxIz9I5xClMmJ9WVdCE/IJT1xIaV0d4uFWArXBsdrdzoIv3kJg==
   dependencies:
     "@secoya/shutdown-manager" "^0.0.8"
     jaeger-client "^3.18.0"
