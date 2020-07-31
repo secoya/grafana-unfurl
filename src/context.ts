@@ -25,7 +25,7 @@ export interface S3Context {
 	readonly s3UrlSigning: S3;
 }
 
-export interface InitializationContext extends ConfigContext, TraceContext, LogContext {
+export interface InitializationContext extends ConfigContext, TraceContext<InitializationContext>, LogContext {
 	readonly app: express.Express;
 	readonly server: Server;
 	readonly shutdown: ShutdownOptions;
@@ -42,7 +42,7 @@ export function initializeContext(init: {
 	rootLog: Logger;
 	log: Logger;
 	span: Span;
-	newSpan: SpanWrapper;
+	newSpan: SpanWrapper<{}>;
 }): InitializationContext {
 	return createInitContext({
 		config: init.config,
@@ -71,7 +71,7 @@ interface SetupContext extends ConfigContext, SlackContext, S3Context, LogContex
 	shutdown: ShutdownOptions;
 	rootLog: Logger;
 	span: Span;
-	newSpan: SpanWrapper;
+	newSpan: SpanWrapper<{}>;
 }
 function createInitContext(setupContext: SetupContext): InitializationContext {
 	const createContext = (child: Span) => createInitContext({ ...setupContext, span: child });
@@ -87,9 +87,19 @@ function createInitContext(setupContext: SetupContext): InitializationContext {
 	);
 }
 
-export interface RuntimeContext extends ConfigContext, SlackContext, S3Context, TraceContext, LogContext {}
+export interface RuntimeContext
+	extends ConfigContext,
+		SlackContext,
+		S3Context,
+		TraceContext<RuntimeContext>,
+		LogContext {}
 
-export interface IntervalContext extends ConfigContext, SlackContext, S3Context, TraceContext, LogContext {}
+export interface IntervalContext
+	extends ConfigContext,
+		SlackContext,
+		S3Context,
+		TraceContext<IntervalContext>,
+		LogContext {}
 function createIntervalContext(setupContext: SetupContext & SlackContext & S3Context, span: Span): IntervalContext {
 	const createContext = (child: Span) => createIntervalContext(setupContext, child);
 	return {

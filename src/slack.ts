@@ -7,7 +7,7 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AllHtmlEntities } from 'html-entities';
 import * as interactionPayloadSchema from './artifacts/schemas/InteractionPayload.json';
 import * as linkShareEventSchema from './artifacts/schemas/LinkShareEvent.json';
-import { assertHasRequestContext, InitializationContext, RequestContext } from './context';
+import { assertHasRequestContext, InitializationContext, RequestContext, RuntimeContext } from './context';
 import { errorHandler } from './errors';
 import { unfurlGrafanaUrl } from './grafana/slack';
 import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from './slack-payloads';
@@ -89,7 +89,7 @@ interface PanelPrompt extends MessageReference {
 	encodedUrl: string;
 }
 const panelPrompts: { [key: string]: PanelPrompt | undefined } = {};
-async function handleLinks({ childSpan, slack, log }: RequestContext, event: LinkShareEvent): Promise<void> {
+async function handleLinks({ childSpan, slack, log }: RuntimeContext, event: LinkShareEvent): Promise<void> {
 	try {
 		log.debug('Link shared event received', { linkShare: event });
 		if (!validateLinkShareEvent(event)) {
@@ -138,7 +138,7 @@ async function handleLinks({ childSpan, slack, log }: RequestContext, event: Lin
 }
 
 function handlePanelSelection(
-	{ childSpan, slack, log }: RequestContext,
+	{ childSpan, slack, log }: RuntimeContext,
 	payload: InteractionPayload,
 	respond: InteractionRespond,
 ): false {
