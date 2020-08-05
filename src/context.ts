@@ -49,13 +49,22 @@ export function initializeContext(init: {
 		...createSlackContext(init.config),
 		app: init.app,
 		server: init.server,
-		s3: new S3({
-			accessKeyId: init.config.s3.accessKeyId,
-			secretAccessKey: init.config.s3.secretAccessKey,
-		}),
+		s3: new S3(
+			init.config.s3.accessKeyId && init.config.s3.secretAccessKey
+				? {
+						credentials: {
+							accessKeyId: init.config.s3.accessKeyId,
+							secretAccessKey: init.config.s3.secretAccessKey,
+						},
+						// tslint:disable-next-line: indent
+				  }
+				: {},
+		),
 		s3UrlSigning: new S3({
-			accessKeyId: init.config.s3.urlSigning.accessKeyId,
-			secretAccessKey: init.config.s3.urlSigning.secretAccessKey,
+			credentials: {
+				accessKeyId: init.config.s3.urlSigning.accessKeyId,
+				secretAccessKey: init.config.s3.urlSigning.secretAccessKey,
+			},
 		}),
 		shutdown: init.shutdown,
 		rootLog: init.rootLog,

@@ -35,7 +35,7 @@ interface ConfigFileBase {
 			width?: number;
 		};
 	};
-	s3?: {
+	s3: {
 		urlSigning: {
 			accessKeyId: string;
 			secretAccessKey: string;
