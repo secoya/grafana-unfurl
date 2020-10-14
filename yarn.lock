@@ -33,9 +33,9 @@
     kuler "^2.0.0"
 
 "@secoya/context-helpers@^0.0.5":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@secoya/context-helpers/-/context-helpers-0.0.4.tgz#6968bf9f7fbdb9531f01e976f8e30f5a3044a88a"
-  integrity sha512-d9Eck1dmbHJiAwT6Fb0Pkgqck4IU075hAJyRSK8HGX+z6jyUJDxzo/8wjutTwwAxdSshuO54x/3pVbQpOyxTSQ==
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/@secoya/context-helpers/-/context-helpers-0.0.5.tgz#dfc87c9aea145ffbd6ccb1695b6f930791dd0df1"
+  integrity sha512-Ie6l3vIQtxGTBr7rs5nAV3yPe+YcHtJQ+yZnNyS4y1vHxOxyCAJyZ8wM84jIPNZ8M8ClpdIW1b4NYxYIkEjVGA==
 
 "@secoya/typescript-scope-analysis@1.0.4":
   version "1.0.4"
@@ -2680,7 +2680,7 @@ winston-transport@^4.4.0:
     readable-stream "^2.3.7"
     triple-beam "^1.2.0"
 
-winston@^3.2.1:
+winston@^3.3.3:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/winston/-/winston-3.3.3.tgz#ae6172042cafb29786afa3d09c8ff833ab7c9170"
   integrity sha512-oEXTISQnC8VlSAKf1KYSSd7J6IWuRPQqDdo8eoRNaYKLvwSb5+79Z3Yi1lrl6KDpU6/VWaxpakDAtb1oQ4n9aw==

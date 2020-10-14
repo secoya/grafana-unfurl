@@ -15,8 +15,5 @@
     "esbenp.prettier-vscode"
   ],
   // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-  "remoteUser": "node",
-	"mounts": [
-		"source=/home/aim/Workspace/libraries/context-helpers/dist,target=/workspaces/alarma/tools/context-helpers,type=bind,consistency=cached"
-	]
+  "remoteUser": "node"
 }
