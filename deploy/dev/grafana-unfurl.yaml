@@ -9,6 +9,11 @@ spec:
       containers:
       - name: grafana-unfurl
         image: localhost:32000/ops/grafana-unfurl
+        env:
+        - name: LOGLEVEL
+          value: debug
+        - name: LOGFORMAT
+          value: text
         volumeMounts:
         - name: grafana-unfurl
           mountPath: /grafana-unfurl

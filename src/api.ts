@@ -1,8 +1,8 @@
+import { errorHandler } from '@secoya/context-helpers/express';
 import * as bodyParser from 'body-parser';
-import * as express from 'express';
+import { NextFunction, Request, Response } from 'express';
 import * as cacheRequestPayloadSchema from './artifacts/schemas/CacheRequestPayload.json';
-import { assertHasRequestContext, InitializationContext } from './context';
-import { errorHandler } from './errors';
+import { assertIsContext, InitializationContext } from './context';
 import { createImage } from './grafana/cache';
 import { parseUrl } from './grafana/url';
 import { getValidator } from './utils';
@@ -15,13 +15,14 @@ interface CacheRequestResponse {
 }
 const validateCacheRequestPayload = getValidator<CacheRequestPayload>(cacheRequestPayloadSchema);
 
-export function setupListener({ app, config, rootLog }: InitializationContext) {
-	app.post(
+export function setupListener({ express, config }: InitializationContext) {
+	express.post(
 		config.webserverPaths.cacheRequests,
 		bodyParser.json({ limit: '10mb' }),
-		async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+		async (req: Request, res: Response, next: NextFunction) => {
 			try {
-				assertHasRequestContext(req);
+				const context = req.context;
+				assertIsContext(context);
 				const { childSpan } = req.context;
 				const body = req.body;
 				if (!validateCacheRequestPayload(body)) {
@@ -46,6 +47,6 @@ export function setupListener({ app, config, rootLog }: InitializationContext) {
 				next(e);
 			}
 		},
-		errorHandler(rootLog),
+		errorHandler(assertIsContext),
 	);
 }

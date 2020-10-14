@@ -1,5 +1,5 @@
 import { URL } from 'url';
-import { RuntimeContext } from '../context';
+import { Context } from '../context';
 
 export interface GrafanaUrl {
 	readonly basePath: string;
@@ -23,10 +23,7 @@ export interface GrafanaPanelUrl extends GrafanaUrl {
 }
 
 const knownParameters = ['orgId', 'refresh', 'from', 'to', 'viewPanel', 'panelId', 'theme', 'tz'];
-export function parseUrl(
-	{ config, log }: RuntimeContext,
-	rawUrl: string,
-): GrafanaDashboardUrl | GrafanaPanelUrl | null {
+export function parseUrl({ config, log }: Context, rawUrl: string): GrafanaDashboardUrl | GrafanaPanelUrl | null {
 	if (!rawUrl.startsWith(config.grafana.matchUrl.toString())) {
 		log.warn(`URL ${rawUrl} does not match ${config.grafana.matchUrl}, skipping`);
 		return null;
@@ -79,7 +76,7 @@ export function parseUrl(
 	};
 }
 
-export function getPanelImageUrl({ config }: RuntimeContext, url: GrafanaPanelUrl): URL {
+export function getPanelImageUrl({ config }: Context, url: GrafanaPanelUrl): URL {
 	const graphImageUrl = new URL(`render/d-solo/${url.dashboardUid}/${url.dashboardName}`, config.grafana.url);
 	graphImageUrl.searchParams.append('orgId', url.orgId.toString());
 	graphImageUrl.searchParams.append('panelId', url.panelId.toString());

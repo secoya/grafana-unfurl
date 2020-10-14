@@ -4,10 +4,10 @@ import { addSeconds, format, isBefore, subSeconds } from 'date-fns';
 import { globalTracer, FORMAT_HTTP_HEADERS } from 'opentracing';
 import * as request from 'request-promise-native';
 import { URL } from 'url';
-import { InitializationContext, RuntimeContext } from '../context';
+import { Context, InitializationContext } from '../context';
 import { getPanelImageUrl, GrafanaPanelUrl } from './url';
 
-export async function createImage(context: RuntimeContext, urlParts: GrafanaPanelUrl): Promise<URL> {
+export async function createImage(context: Context, urlParts: GrafanaPanelUrl): Promise<URL> {
 	const { config, s3, s3UrlSigning, childSpan, log } = context;
 	const imageUrl = getPanelImageUrl(context, urlParts);
 	log.debug(`Caching ${imageUrl}`);
@@ -70,40 +70,34 @@ export async function createImage(context: RuntimeContext, urlParts: GrafanaPane
 	return new URL(s3url);
 }
 
-export async function setupCleanup({
-	config,
-	shutdown,
-	invokeWithIntervalContext,
-	log,
-}: InitializationContext): Promise<void> {
+export async function setupCleanup({ config, shutdownHandlers, newSpan, log }: InitializationContext): Promise<void> {
+	log.verbose('setup cleanup');
 	let cleanupInProgress = false;
 	let interval: NodeJS.Timeout;
 	interval = setInterval(
-		async () =>
-			invokeWithIntervalContext(async (context) => {
-				const { log: intvLog, span } = context;
-				try {
-					if (cleanupInProgress) {
-						intvLog.warn('Cleanup already in progress, not starting another one.');
-					}
-					cleanupInProgress = true;
-					await deleteExpiredImages(context);
-				} catch (e) {
-					span.log({ stack: e.stack });
-					span.setTag('error', true);
-					span.setTag('sampling.priority', 1);
-					intvLog.error(e);
-				} finally {
-					cleanupInProgress = false;
+		newSpan(async (context) => {
+			const { log: intvLog, span } = context;
+			try {
+				if (cleanupInProgress) {
+					intvLog.warn('Cleanup already in progress, not starting another one.');
 				}
-			}),
+				cleanupInProgress = true;
+				await deleteExpiredImages(context);
+			} catch (e) {
+				span.log({ stack: e.stack });
+				span.setTag('error', true);
+				span.setTag('sampling.priority', 1);
+				intvLog.error(e);
+			} finally {
+				cleanupInProgress = false;
+			}
+		}),
 		config.grafana.cleanupInterval * 1000,
 	);
-	shutdown.handlers.push(() => clearInterval(interval));
-	log.verbose('cleanup setup complete');
+	shutdownHandlers.append('teardown cleanup', () => clearInterval(interval));
 }
 
-async function deleteExpiredImages(context: RuntimeContext): Promise<void> {
+async function deleteExpiredImages(context: Context): Promise<void> {
 	const { config, s3, log } = context;
 	const now = new Date();
 	const expireCutoff = subSeconds(now, config.grafana.retention);

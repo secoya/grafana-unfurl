@@ -10,9 +10,13 @@
   // Add the IDs of extensions you want installed when the container is created.
   "extensions": [
     "dbaeumer.vscode-eslint",
+		"eg2.tslint",
     "ms-vscode.vscode-typescript-tslint-plugin",
     "esbenp.prettier-vscode"
   ],
   // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-  "remoteUser": "node"
+  "remoteUser": "node",
+	"mounts": [
+		"source=/home/aim/Workspace/libraries/context-helpers/dist,target=/workspaces/alarma/tools/context-helpers,type=bind,consistency=cached"
+	]
 }

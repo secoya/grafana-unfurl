@@ -1,3 +1,4 @@
+import { errorHandler } from '@secoya/context-helpers/express';
 import { createEventAdapter } from '@slack/events-api';
 import SlackEventAdapter from '@slack/events-api/dist/adapter';
 import { createMessageAdapter } from '@slack/interactive-messages';
@@ -7,8 +8,7 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AllHtmlEntities } from 'html-entities';
 import * as interactionPayloadSchema from './artifacts/schemas/InteractionPayload.json';
 import * as linkShareEventSchema from './artifacts/schemas/LinkShareEvent.json';
-import { assertHasRequestContext, InitializationContext, RequestContext, RuntimeContext } from './context';
-import { errorHandler } from './errors';
+import { assertIsContext, Context, InitializationContext } from './context';
 import { unfurlGrafanaUrl } from './grafana/slack';
 import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from './slack-payloads';
 import { getValidator } from './utils';
@@ -16,7 +16,8 @@ import { getValidator } from './utils';
 const validateLinkShareEvent = getValidator<LinkShareEvent>(linkShareEventSchema);
 const validateInteractionPayload = getValidator<InteractionPayload>(interactionPayloadSchema);
 
-export async function setupListeners({ config, app, rootLog, log }: InitializationContext) {
+export async function setupListeners({ config, express, log }: InitializationContext) {
+	log.verbose('setup slack event listener');
 	const events = createEventAdapter(config.slack.clientSigningSecret) as SlackEventAdapter & EventEmitter;
 	const interactions = createMessageAdapter(config.slack.clientSigningSecret);
 	const [eventsLeapfrog, getEventContext] = getLeapfrogRequestMiddleware(
@@ -25,12 +26,17 @@ export async function setupListeners({ config, app, rootLog, log }: Initializati
 	const [interactionsLeapfrog, getInteractionContext] = getLeapfrogRequestMiddleware(
 		(body: { trigger_id: string }) => body.trigger_id,
 	);
-	app.post(config.webserverPaths.slackEvents, eventsLeapfrog, events.requestListener(), errorHandler(rootLog));
-	app.post(
+	express.post(
+		config.webserverPaths.slackEvents,
+		eventsLeapfrog,
+		events.requestListener(),
+		errorHandler(assertIsContext),
+	);
+	express.post(
 		config.webserverPaths.slackActions,
 		interactionsLeapfrog,
 		interactions.requestListener(),
-		errorHandler(rootLog),
+		errorHandler(assertIsContext),
 	);
 	events.on('link_shared', async (event: LinkShareEvent) => handleLinks(getEventContext(event.event_ts), event));
 	interactions.action({ actionId: 'panel_select' }, (payload: InteractionPayload, respond: InteractionRespond) =>
@@ -41,12 +47,11 @@ export async function setupListeners({ config, app, rootLog, log }: Initializati
 		(payload: InteractionPayload, respond: InteractionRespond) =>
 			handlePanelSelectorRemoval(getInteractionContext(payload.trigger_id), payload, respond),
 	);
-	log.verbose('slack event listener setup completed');
 }
 
 function getLeapfrogRequestMiddleware(
 	getKey: (body: any) => string,
-): [RequestHandler, (key: string) => RequestContext, (key: string) => Request] {
+): [RequestHandler, (key: string) => Context, (key: string) => Request] {
 	// This is one hell of an ugly hack
 	// The way both the events and interactions API in the Slack node SDK is structured prevents us
 	// from passing any information from a middleware to the event listeners, like the original http request or even a trace-id.
@@ -77,9 +82,9 @@ function getLeapfrogRequestMiddleware(
 		clearTimeout(timeout);
 		return req;
 	}
-	function retrieveContext(key: string): RequestContext {
+	function retrieveContext(key: string): Context {
 		const req = retrieveRequest(key);
-		assertHasRequestContext(req);
+		assertIsContext(req.context);
 		return req.context;
 	}
 	return [middleware, retrieveContext, retrieveRequest];
@@ -89,7 +94,7 @@ interface PanelPrompt extends MessageReference {
 	encodedUrl: string;
 }
 const panelPrompts: { [key: string]: PanelPrompt | undefined } = {};
-async function handleLinks({ childSpan, slack, log }: RuntimeContext, event: LinkShareEvent): Promise<void> {
+async function handleLinks({ childSpan, slack, log }: Context, event: LinkShareEvent): Promise<void> {
 	try {
 		log.debug('Link shared event received', { linkShare: event });
 		if (!validateLinkShareEvent(event)) {
@@ -138,7 +143,7 @@ async function handleLinks({ childSpan, slack, log }: RuntimeContext, event: Lin
 }
 
 function handlePanelSelection(
-	{ childSpan, slack, log }: RuntimeContext,
+	{ childSpan, slack, log }: Context,
 	payload: InteractionPayload,
 	respond: InteractionRespond,
 ): false {
@@ -208,11 +213,7 @@ function handlePanelSelection(
 	return false;
 }
 
-function handlePanelSelectorRemoval(
-	{ log }: RequestContext,
-	payload: InteractionPayload,
-	respond: InteractionRespond,
-): false {
+function handlePanelSelectorRemoval({ log }: Context, payload: InteractionPayload, respond: InteractionRespond): false {
 	(async () => {
 		log.debug('Panel selection payload received', { payload });
 		try {

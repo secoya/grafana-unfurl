@@ -1,22 +1,69 @@
-import { Logger, LogContext } from '@secoya/log-helpers';
-import { ShutdownOptions } from '@secoya/shutdown-manager';
-import { assertHasSpan, createTraceContext, SpanWrapper, TraceContext } from '@secoya/tracing-helpers';
+import { ConfigContext } from '@secoya/context-helpers/config';
+import {
+	createRequestContextMiddleware,
+	ExpressContext,
+	RequestContextMiddlewareContext,
+} from '@secoya/context-helpers/express';
+import { assertIsLogContext, createLogContext, LogContext, RootLogContext } from '@secoya/context-helpers/log';
+import { ShutdownHandlingContext } from '@secoya/context-helpers/shutdown';
+import { StartupBaseContext } from '@secoya/context-helpers/startup';
+import {
+	assertIsTraceContext,
+	createTraceContext,
+	createTraceContextSpawnerContext,
+	SpanContext,
+	TracerContext,
+	TraceContext,
+	TraceContextSpawnerContext,
+} from '@secoya/context-helpers/trace';
 import { WebClient as SlackClient } from '@slack/web-api';
 import * as S3 from 'aws-sdk/clients/s3';
-import * as express from 'express';
-import { NextFunction, Request, RequestHandler, Response } from 'express';
-import { Server } from 'http';
 import { Span } from 'opentracing';
 import { Config } from './config';
 
-export interface ConfigContext {
-	readonly config: Config;
+type CommonContext = ConfigContext<Config> & S3Context & SlackContext & LogContext;
+
+export type SetupContext = CommonContext & StartupBaseContext & TracerContext & SpanContext & ExpressContext;
+
+export type InitializationContext = CommonContext &
+	RootLogContext &
+	ShutdownHandlingContext &
+	ExpressContext &
+	RequestContextMiddlewareContext &
+	TraceContext<InitializationContext> &
+	TraceContextSpawnerContext<Context>;
+
+export type Context = CommonContext & TraceContext<Context>;
+
+export function initializeContext(setupContext: SetupContext): InitializationContext {
+	return {
+		...setupContext,
+		...createLogContext(setupContext),
+		...createTraceContext(setupContext, (child: Span) => initializeContext({ ...setupContext, span: child })),
+		...createRequestContextMiddleware((child: Span) => createContext({ ...setupContext, span: child })),
+		...createTraceContextSpawnerContext(setupContext, (child: Span) =>
+			createContext({ ...setupContext, span: child }),
+		),
+	};
+}
+
+function createContext(setupContext: SetupContext): Context {
+	return {
+		...setupContext,
+		...createLogContext(setupContext),
+		...createTraceContext(setupContext, (child: Span) => createContext({ ...setupContext, span: child })),
+	};
 }
 
 export interface SlackContext {
 	readonly slack: SlackClient;
 }
-function createSlackContext({ slack: { botToken } }: Config): SlackContext {
+
+export function createSlackContext({
+	config: {
+		slack: { botToken },
+	},
+}: ConfigContext<Config>): SlackContext {
 	return { slack: new SlackClient(botToken) };
 }
 
@@ -25,36 +72,14 @@ export interface S3Context {
 	readonly s3UrlSigning: S3;
 }
 
-export interface InitializationContext extends ConfigContext, TraceContext<InitializationContext>, LogContext {
-	readonly app: express.Express;
-	readonly server: Server;
-	readonly shutdown: ShutdownOptions;
-	readonly rootLog: Logger;
-	readonly requestContextMiddleware: RequestHandler;
-	readonly invokeWithIntervalContext: (fn: (context: IntervalContext) => Promise<void>) => Promise<void>;
-}
-
-export function initializeContext(init: {
-	config: Config;
-	app: express.Express;
-	server: Server;
-	shutdown: ShutdownOptions;
-	rootLog: Logger;
-	log: Logger;
-	span: Span;
-	newSpan: SpanWrapper<{}>;
-}): InitializationContext {
-	return createInitContext({
-		config: init.config,
-		...createSlackContext(init.config),
-		app: init.app,
-		server: init.server,
+export function createS3Context({ config }: ConfigContext<Config>): S3Context {
+	return {
 		s3: new S3(
-			init.config.s3.accessKeyId && init.config.s3.secretAccessKey
+			config.s3.accessKeyId && config.s3.secretAccessKey
 				? {
 						credentials: {
-							accessKeyId: init.config.s3.accessKeyId,
-							secretAccessKey: init.config.s3.secretAccessKey,
+							accessKeyId: config.s3.accessKeyId,
+							secretAccessKey: config.s3.secretAccessKey,
 						},
 						// tslint:disable-next-line: indent
 				  }
@@ -62,93 +87,14 @@ export function initializeContext(init: {
 		),
 		s3UrlSigning: new S3({
 			credentials: {
-				accessKeyId: init.config.s3.urlSigning.accessKeyId,
-				secretAccessKey: init.config.s3.urlSigning.secretAccessKey,
+				accessKeyId: config.s3.urlSigning.accessKeyId,
+				secretAccessKey: config.s3.urlSigning.secretAccessKey,
 			},
 		}),
-		shutdown: init.shutdown,
-		rootLog: init.rootLog,
-		log: init.log,
-		span: init.span,
-		newSpan: init.newSpan,
-	});
-}
-
-interface SetupContext extends ConfigContext, SlackContext, S3Context, LogContext {
-	app: express.Express;
-	server: Server;
-	shutdown: ShutdownOptions;
-	rootLog: Logger;
-	span: Span;
-	newSpan: SpanWrapper<{}>;
-}
-function createInitContext(setupContext: SetupContext): InitializationContext {
-	const createContext = (child: Span) => createInitContext({ ...setupContext, span: child });
-	const { span } = setupContext;
-	const initializationContext = {
-		...setupContext,
-		...createTraceContext(span, createContext),
-	};
-	return Object.assign(
-		initializationContext,
-		createInvokeWithIntervalContext(initializationContext),
-		createRequestContextMiddleware(initializationContext),
-	);
-}
-
-export interface RuntimeContext
-	extends ConfigContext,
-		SlackContext,
-		S3Context,
-		TraceContext<RuntimeContext>,
-		LogContext {}
-
-export interface IntervalContext
-	extends ConfigContext,
-		SlackContext,
-		S3Context,
-		TraceContext<IntervalContext>,
-		LogContext {}
-function createIntervalContext(setupContext: SetupContext & SlackContext & S3Context, span: Span): IntervalContext {
-	const createContext = (child: Span) => createIntervalContext(setupContext, child);
-	return {
-		...setupContext,
-		...createTraceContext(span, createContext),
-	};
-}
-function createInvokeWithIntervalContext(setupContext: SetupContext) {
-	return {
-		invokeWithIntervalContext: (jobFn: (context: IntervalContext) => Promise<void>): Promise<void> =>
-			setupContext.newSpan(
-				({ span }: TraceContext) => jobFn(createIntervalContext(setupContext, span)),
-				`interval: ${jobFn.name}`,
-			)(),
 	};
 }
 
-export interface RequestContext extends ConfigContext, SlackContext, S3Context, TraceContext, LogContext {}
-function createRequestContext(setupContext: SetupContext, span: Span): RequestContext {
-	const createContext = (child: Span) => createRequestContext(setupContext, child);
-	return {
-		...setupContext,
-		...createTraceContext(span, createContext),
-	};
-}
-function createRequestContextMiddleware(setupContext: SetupContext): { requestContextMiddleware: RequestHandler } {
-	return {
-		requestContextMiddleware: (req: Request, _res: Response, next: NextFunction) => {
-			assertHasSpan(req);
-			req.context = createRequestContext(setupContext, req.span);
-			next();
-		},
-	};
-}
-export function assertHasRequestContext(obj: { context?: any }): asserts obj is { context: RuntimeContext } {
-	if (!obj.context) {
-		throw new Error('Key `context` not found on object');
-	} else {
-		if (!obj.context.span) {
-			throw new Error('Key `context` is not a RuntimeContext');
-		}
-	}
+export function assertIsContext(obj: any): asserts obj is Context {
+	assertIsTraceContext(obj);
+	assertIsLogContext(obj);
 }

@@ -1,4 +1,4 @@
-import { LogFormat, LogLevel } from '@secoya/log-helpers';
+import { LogFormat, LogLevel } from '@secoya/context-helpers/log';
 import { readFile } from 'fs';
 import { cloneDeep, merge } from 'lodash';
 import { URL } from 'url';

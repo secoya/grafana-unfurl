@@ -1,7 +1,7 @@
 import { ActionsBlock, ImageBlock, MessageAttachment, Option, SectionBlock, StaticSelect } from '@slack/web-api';
 import * as crypto from 'crypto';
 import { URL } from 'url';
-import { RuntimeContext } from '../context';
+import { Context } from '../context';
 import { getDashboard, GrafanaDashboard } from './api';
 import { createImage } from './cache';
 import { parseUrl } from './url';
@@ -12,7 +12,7 @@ interface PanelPrompt {
 }
 
 export async function unfurlGrafanaUrl(
-	context: RuntimeContext,
+	context: Context,
 	rawUrl: string,
 	panelId?: number,
 ): Promise<[MessageAttachment, null] | [null, PanelPrompt] | [null, null]> {
