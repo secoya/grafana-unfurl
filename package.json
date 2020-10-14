@@ -9,7 +9,7 @@
 		"push-latest": "docker build --file deploy/prod/Dockerfile --tag cr.orbit.dev/ops/grafana-unfurl:latest . && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
 	},
 	"dependencies": {
-		"@secoya/context-helpers": "^0.0.5",
+		"@secoya/context-helpers": "^0.0.7",
 		"@slack/events-api": "^2.3.2",
 		"@slack/interactive-messages": "^1.5.0",
 		"@slack/web-api": "^5.8.0",
