@@ -6,7 +6,7 @@
 	"license": "UNLICENSED",
 	"scripts": {
 		"schemas": "tools/generateJSONSchemas.ts src/artifacts/schemas tsconfig.json",
-		"push-latest": "docker build --file deploy/prod/Dockerfile --tag cr.orbit.dev/ops/grafana-unfurl:latest . && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
+		"push-latest": "tools/build.sh && docker push cr.orbit.dev/ops/grafana-unfurl:latest"
 	},
 	"dependencies": {
 		"@secoya/context-helpers": "^0.0.7",

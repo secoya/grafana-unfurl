@@ -1,24 +1,25 @@
 FROM node:10-alpine AS build
 WORKDIR /build
+ARG NPM_TOKEN
 ENV PATH=$PATH:/build/node_modules/.bin
 
 RUN mkdir /artifacts
-COPY package.json yarn.lock /build/
-RUN yarn install --production --frozen-lockfile && mv node_modules /artifacts/
+COPY package.json tools/.yarnclean tools/.npmrc yarn.lock /build/
+RUN yarn install --production --frozen-lockfile && mv node_modules /artifacts/ && rm .yarnclean
 RUN yarn install --frozen-lockfile
 
 COPY tsconfig.json tslint.json /build/
 COPY tools/ /build/tools/
 
 RUN mkdir -p src/artifacts/schemas
-COPY typings /build/typings/
-COPY src/*.ts /build/src/
-COPY src/grafana /build/src/grafana
+COPY typings typings/
+COPY src/*.ts src/
+COPY src/grafana src/grafana
 
 ENV NODE_ENV=production
 
-RUN tools/generateJSONSchemas.ts src/artifacts/schemas tsconfig.json
 RUN tslint -p tsconfig.json
+RUN tools/schemas.sh
 RUN tsc -p tsconfig.json
 RUN mv dist /artifacts/
 
