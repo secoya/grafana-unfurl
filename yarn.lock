@@ -32,10 +32,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@secoya/context-helpers@^0.0.7":
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/@secoya/context-helpers/-/context-helpers-0.0.7.tgz#30e9b9363034dec483ce6ea8a24d2976777cd519"
-  integrity sha512-gnXym7ytY5Tf9W9Yd0fXbFjHF1paNydGyQIWipL+Pl3gPDJlh7jT0MCnChLTPztew+LbEjDZxMUPUn69HezUmQ==
+"@secoya/context-helpers@^0.0.8":
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/@secoya/context-helpers/-/context-helpers-0.0.8.tgz#e138a12f2a70cdcf6aae23236a227243536ce447"
+  integrity sha512-+Fzbtlvx9ioJ6cuMeG9CHasvFRBJc/rjrUXNEApl5VCbHV88zNQiA9jzFHSlYGosm5DK2K+jkOJQ/QGvVvD0/Q==
 
 "@secoya/typescript-scope-analysis@1.0.4":
   version "1.0.4"
