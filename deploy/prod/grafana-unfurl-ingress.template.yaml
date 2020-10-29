@@ -17,8 +17,8 @@
         - path: /grafana-unfurl/api/slack/actions
           backend:
             serviceName: grafana-unfurl
-            servicePort: 3000
+            servicePort: web
         - path: /grafana-unfurl/api/slack/events
           backend:
             serviceName: grafana-unfurl
-            servicePort: 3000
+            servicePort: web
