@@ -1,4 +1,4 @@
-FROM node:10-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /build
 ARG NPM_TOKEN
 ENV PATH=$PATH:/build/node_modules/.bin
@@ -23,7 +23,7 @@ RUN tools/schemas.sh
 RUN tsc -p tsconfig.json
 RUN mv dist /artifacts/
 
-FROM node:10-alpine
+FROM node:20-alpine
 WORKDIR /grafana-unfurl
 
 COPY --from=build /artifacts/ /grafana-unfurl/

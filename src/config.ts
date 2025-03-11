@@ -1,10 +1,9 @@
-import { LogFormat, LogLevel } from '@secoya/context-helpers/log';
+import { ConfigContext } from '@secoya/context-helpers/config';
 import { readFile } from 'fs';
-import { cloneDeep, merge } from 'lodash';
+import { cloneDeep } from 'lodash';
 import { URL } from 'url';
 import * as yaml from 'yaml';
 import * as configFileSchema from './artifacts/schemas/ConfigFile.json';
-import { RequiredRecursive } from './utils';
 import { getValidator } from './utils';
 
 function maskIfDefined(val: any | null | undefined): any | null | undefined {
@@ -25,23 +24,34 @@ export function maskSensitiveConfig(config: Config): any {
 	return masked;
 }
 
-interface ConfigFileBase {
-	logFormat?: LogFormat;
-	logLevel?: LogLevel;
-	grafana?: {
-		headers?: { [key: string]: string };
-		render?: {
-			height?: number;
-			width?: number;
+declare const durationSym: unique symbol;
+export type Duration = number & { [durationSym]: never };
+
+export type ConfigFile = OptionalKeysExceptIndexed<Config>;
+export interface Config {
+	urlPath: string;
+	grafana: {
+		headers: { [key: string]: string };
+		url: URL;
+		matchUrl: URL;
+		retention: Duration;
+		cleanupInterval: Duration;
+		render: {
+			height: number;
+			width: number;
 		};
 	};
 	s3: {
+		bucket: string;
+		root: string;
+		endpoint?: string;
+		region?: string;
+		accessKeyId?: string;
+		secretAccessKey?: string;
 		urlSigning: {
 			accessKeyId: string;
 			secretAccessKey: string;
 		};
-		bucket: string;
-		root?: string;
 	};
 	slack: {
 		botToken: string;
@@ -51,41 +61,40 @@ interface ConfigFileBase {
 	};
 }
 
-interface ConfigFileBaseOptionals {
-	s3?: {
-		accessKeyId?: string;
-		secretAccessKey?: string;
-	};
-}
+type AsConfigFileValue<V> = V extends Duration
+	? string
+	: V extends URL
+	? string
+	: V extends number | string | boolean
+	? V
+	: V extends Iterable<infer E>
+	? AsConfigFileValue<E>[]
+	: V extends Record<any, any>
+	? OptionalKeysExceptIndexed<V>
+	: string;
+type Prettify<T> = {
+	[K in keyof T]: T[K];
+	// eslint-disable-next-line @typescript-eslint/ban-types
+} & {};
+// tslint:disable
+type OptionalKeysExceptIndexed<V> = Prettify<
+	{
+		[K in keyof V as string extends K
+			? never
+			: number extends K
+			? never
+			: symbol extends K
+			? never
+			: K]?: AsConfigFileValue<V[K]>;
+	} & {
+		[K in keyof V as string extends K ? K : number extends K ? K : symbol extends K ? K : never]: AsConfigFileValue<
+			V[K]
+		>;
+	}
+>;
+// tslint:enable
 
-export type ConfigFile = ConfigFileBase &
-	ConfigFileBaseOptionals & {
-		url: string;
-		grafana: {
-			url: string;
-			matchUrl: string;
-			retention?: string;
-			cleanupInterval?: string;
-		};
-	};
-
-export type Config = RequiredRecursive<ConfigFileBase> &
-	ConfigFileBaseOptionals & {
-		url: URL;
-		grafana: {
-			url: URL;
-			matchUrl: URL;
-			retention: number;
-			cleanupInterval: number;
-		};
-		webserverPaths: {
-			slackEvents: string;
-			slackActions: string;
-			cacheRequests: string;
-		};
-	};
-
-export async function loadConfig(configPath: string): Promise<Config> {
+export async function loadConfig(configPath: string): Promise<ConfigContext<Config>> {
 	const validateConfig = getValidator<ConfigFile>(configFileSchema);
 	const configData: string = await new Promise(async (resolve, reject) => {
 		readFile(configPath, (err, data) => {
@@ -100,54 +109,79 @@ export async function loadConfig(configPath: string): Promise<Config> {
 	if (!validateConfig(jsonConfig)) {
 		throw new Error(`Unable to validate config, errors were: ${JSON.stringify(validateConfig.errors)}`);
 	}
-	const defaults = {
-		logFormat: 'text',
-		logLevel: 'info',
-		s3: {
-			root: '',
-		},
+	const config: Config = {
+		urlPath: (jsonConfig.urlPath ?? '/').replace(/([^/])$/, '$1/'),
 		grafana: {
 			headers: {},
-			retention: '30d',
-			cleanupInterval: '1d',
+			url: new URL(
+				required(
+					jsonConfig.grafana?.url ?? process.env.GRAFANA_URL,
+					'grafana.url is required or must be set via $GRAFANA_URL',
+				).replace(/([^/])$/, '$1/'),
+			),
+			matchUrl: new URL(
+				required(
+					jsonConfig.grafana?.matchUrl ?? process.env.GRAFANA_MATCH_URL,
+					'grafana.matchUrl is required or must be set via $GRAFANA_MATCH_URL',
+				).replace(/([^/])$/, '$1/'),
+			),
+			retention: parseDuration(jsonConfig.grafana?.retention ?? '30d', 'grafana.retention'),
+			cleanupInterval: parseDuration(jsonConfig.grafana?.cleanupInterval ?? '1d', 'grafana.cleanupInterval'),
 			render: {
 				height: 500,
 				width: 1000,
 			},
 		},
-	};
-	const parsedURLs = {
-		url: new URL(jsonConfig.url.replace(/([^/])$/, '$1/')),
-		grafana: {
-			url: new URL(jsonConfig.grafana.url.replace(/([^/])$/, '$1/')),
-			matchUrl: new URL(jsonConfig.grafana.matchUrl.replace(/([^/])$/, '$1/')),
-		},
-	};
-	const staticConfig: { webserverPaths: Config['webserverPaths'] } = {
-		webserverPaths: {
-			slackEvents: new URL('api/slack/events', parsedURLs.url).pathname,
-			slackActions: new URL('api/slack/actions', parsedURLs.url).pathname,
-			cacheRequests: new URL('api/cache', parsedURLs.url).pathname,
-		},
-	};
-	const mergedConfig = merge(defaults, jsonConfig, parsedURLs, staticConfig);
-	const parsedDurations = {
-		grafana: {
-			retention: parseDuration(mergedConfig.grafana.retention, 'grafana.retention'),
-			cleanupInterval: parseDuration(mergedConfig.grafana.cleanupInterval, 'grafana.cleanupInterval'),
-		},
-	};
-	const pathFixes = {
 		s3: {
-			root: mergedConfig.s3.root.replace(/^\//g, '').replace(/([^/])$/, '$1/'),
+			bucket: required(
+				jsonConfig.s3?.bucket ?? process.env.S3_BUCKET,
+				's3.bucket is required or must be set via $S3_BUCKET',
+			),
+			root: (jsonConfig.s3?.root ?? process.env.S3_ROOT ?? '').replace(/^\//g, '').replace(/([^/])$/, '$1/'),
+			endpoint: jsonConfig.s3?.endpoint ?? process.env.S3_ENDPOINT,
+			region: jsonConfig.s3?.region ?? process.env.S3_REGION,
+			accessKeyId: jsonConfig.s3?.accessKeyId ?? process.env.S3_ACCESS_KEY_ID,
+			secretAccessKey: jsonConfig.s3?.secretAccessKey ?? process.env.S3_SECRET_ACCESS_KEY,
+			urlSigning: {
+				accessKeyId: required(
+					jsonConfig.s3?.accessKeyId ??
+						process.env.S3_ACCESS_KEY_ID ??
+						process.env.S3_URL_SIGNING_ACCESS_KEY_ID,
+					's3.accessKeyId is required or must be set via $S3_URL_SIGNING_ACCESS_KEY_ID',
+				),
+				secretAccessKey: required(
+					jsonConfig.s3?.secretAccessKey ??
+						process.env.S3_SECRET_ACCESS_KEY ??
+						process.env.S3_URL_SIGNING_SECRET_ACCESS_KEY,
+					's3.secretAccessKey is required or must be set via $S3_URL_SIGNING_SECRET_ACCESS_KEY',
+				),
+			},
+		},
+		slack: {
+			botToken: required(
+				jsonConfig.slack?.botToken ?? process.env.SLACK_BOT_TOKEN,
+				'slack.botToken is required or must be set via $SLACK_BOT_TOKEN',
+			),
+			clientId: required(
+				jsonConfig.slack?.clientId ?? process.env.SLACK_CLIENT_ID,
+				'slack.clientId is required or must be set via $SLACK_CLIENT_ID',
+			),
+			clientSecret: required(
+				jsonConfig.slack?.clientSecret ?? process.env.SLACK_CLIENT_SECRET,
+				'slack.clientSecret is required or must be set via $SLACK_CLIENT_SECRET',
+			),
+			clientSigningSecret: required(
+				jsonConfig.slack?.clientSigningSecret ?? process.env.SLACK_CLIENT_SIGNING_SECRET,
+				'slack.clientSigningSecret is required or must be set via $SLACK_CLIENT_SIGNING_SECRET',
+			),
 		},
 	};
-	return merge(mergedConfig, parsedDurations, pathFixes);
+	return { config };
 }
 
 // Convert a duration to seconds.
 // Allowed suffixes are "s" (seconds), "m" (minutes), "h" (hours), "d" (days)
-function parseDuration(duration: string, path?: string): number {
+function parseDuration(duration: string, path?: string): Duration {
 	const matches = duration.match(/^(?<qty>\d+)(?<suffix>s|m|h|d)$/);
 	if (matches === null) {
 		throw new Error(
@@ -156,6 +190,13 @@ function parseDuration(duration: string, path?: string): number {
 	} else {
 		const suffixMultipliers = { s: 1, m: 60, h: 3600, d: 86400 };
 		const { qty, suffix } = matches.groups as { qty: string; suffix: keyof typeof suffixMultipliers };
-		return parseInt(qty, 10) * suffixMultipliers[suffix];
+		return (parseInt(qty, 10) * suffixMultipliers[suffix]) as Duration;
 	}
+}
+
+function required<T>(val: T | undefined, message: string): T {
+	if (val === undefined) {
+		throw new Error(message);
+	}
+	return val;
 }

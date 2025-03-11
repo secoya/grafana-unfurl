@@ -28,7 +28,7 @@ export async function generateSchemas(
 	const newManifests: { [key: string]: string } = {};
 	try {
 		const generator = TJS.buildGenerator(TJS.programFromConfig(path.resolve(process.cwd(), tsconfig)), {
-			defaultProps: true,
+			defaultProps: false,
 			ignoreErrors: true,
 			required: true,
 		});

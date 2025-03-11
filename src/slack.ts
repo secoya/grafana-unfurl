@@ -1,6 +1,7 @@
 import { errorHandler } from '@secoya/context-helpers/express';
 import { createEventAdapter } from '@slack/events-api';
 import SlackEventAdapter from '@slack/events-api/dist/adapter';
+import * as path from 'path';
 import { createMessageAdapter } from '@slack/interactive-messages';
 import { LinkUnfurls } from '@slack/web-api';
 import { EventEmitter } from 'events';
@@ -9,6 +10,7 @@ import { AllHtmlEntities } from 'html-entities';
 import * as interactionPayloadSchema from './artifacts/schemas/InteractionPayload.json';
 import * as linkShareEventSchema from './artifacts/schemas/LinkShareEvent.json';
 import { assertIsContext, Context, InitializationContext } from './context';
+import { stackOrError } from './errors';
 import { unfurlGrafanaUrl } from './grafana/slack';
 import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from './slack-payloads';
 import { getValidator } from './utils';
@@ -27,13 +29,13 @@ export async function setupListeners({ config, express, log }: InitializationCon
 		(body: { trigger_id: string }) => body.trigger_id,
 	);
 	express.post(
-		config.webserverPaths.slackEvents,
+		path.join(config.urlPath, 'api/slack/events'),
 		eventsLeapfrog,
 		events.requestListener(),
 		errorHandler(assertIsContext),
 	);
 	express.post(
-		config.webserverPaths.slackActions,
+		path.join(config.urlPath, 'api/slack/actions'),
 		interactionsLeapfrog,
 		interactions.requestListener(),
 		errorHandler(assertIsContext),
@@ -203,7 +205,7 @@ function handlePanelSelection(
 				await respond({
 					replace_original: false,
 					response_type: 'ephemeral',
-					text: e.stack ? e.stack : e,
+					text: stackOrError(e),
 				});
 			} catch (e) {
 				log.error(e);
@@ -243,7 +245,7 @@ function handlePanelSelectorRemoval({ log }: Context, payload: InteractionPayloa
 			respond({
 				replace_original: false,
 				response_type: 'ephemeral',
-				text: e.stack ? e.stack : e,
+				text: stackOrError(e),
 			});
 		}
 	})();

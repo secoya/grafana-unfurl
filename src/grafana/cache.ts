@@ -1,10 +1,11 @@
 import * as S3 from 'aws-sdk/clients/s3';
 import { AWSError } from 'aws-sdk/lib/error';
 import { addSeconds, format, isBefore, subSeconds } from 'date-fns';
-import { globalTracer, FORMAT_HTTP_HEADERS } from 'opentracing';
+import { FORMAT_HTTP_HEADERS, globalTracer } from 'opentracing';
 import * as request from 'request-promise-native';
 import { URL } from 'url';
 import { Context, InitializationContext } from '../context';
+import { messageOrError, stackOrError } from '../errors';
 import { getPanelImageUrl, GrafanaPanelUrl } from './url';
 
 export async function createImage(context: Context, urlParts: GrafanaPanelUrl): Promise<URL> {
@@ -25,7 +26,7 @@ export async function createImage(context: Context, urlParts: GrafanaPanelUrl): 
 			});
 		})();
 	} catch (e) {
-		throw new Error(`Grafana returned an error when rendering ${imageUrl}: ${e.toString().substr(0, 30)}...`);
+		throw new Error(`Grafana returned an error when rendering ${imageUrl}: ${messageOrError(e).substr(0, 30)}...`);
 	}
 	const now = new Date();
 	const key = format(now, 'yyyyMMddHHmmssSSS');
@@ -54,6 +55,8 @@ export async function createImage(context: Context, urlParts: GrafanaPanelUrl): 
 		s3UrlSigning.getSignedUrl(
 			'getObject',
 			{
+				...(config.s3.endpoint ? { endpoint: config.s3.endpoint } : {}),
+				...(config.s3.region ? { region: config.s3.region } : {}),
 				Bucket: config.s3.bucket,
 				Expires: config.grafana.retention,
 				Key: cachedGraphImagePath,
@@ -84,7 +87,7 @@ export async function setupCleanup({ config, shutdownHandlers, newSpan, log }: I
 				cleanupInProgress = true;
 				await deleteExpiredImages(context);
 			} catch (e) {
-				span.log({ stack: e.stack });
+				span.log({ stack: stackOrError(e) });
 				span.setTag('error', true);
 				span.setTag('sampling.priority', 1);
 				intvLog.error(e);
@@ -125,7 +128,7 @@ async function deleteExpiredImages(context: Context): Promise<void> {
 		(o) =>
 			new Promise<S3.DeleteObjectOutput>((resolve, reject) => {
 				if (!o.Key) {
-					log.warn(`Cleanup: Received ubject without key ${JSON.stringify(o)}`);
+					log.warn(`Cleanup: Received object without key ${JSON.stringify(o)}`);
 					return;
 				}
 				s3.deleteObject(

@@ -2,6 +2,7 @@
 	"extends": ["tslint-secoya"],
 	"rules": {
 		"no-relative-imports": false,
-		"react-aware-member-ordering": false
+		"react-aware-member-ordering": false,
+		"ordered-imports": false
 	}
 }

@@ -1,6 +1,7 @@
 import { errorHandler, wrapAsyncReqHandler } from '@secoya/context-helpers/express';
 import * as bodyParser from 'body-parser';
 import { Request, Response } from 'express';
+import * as path from 'path';
 import * as cacheRequestPayloadSchema from './artifacts/schemas/CacheRequestPayload.json';
 import { assertIsContext, Context, InitializationContext } from './context';
 import { createImage } from './grafana/cache';
@@ -17,7 +18,7 @@ const validateCacheRequestPayload = getValidator<CacheRequestPayload>(cacheReque
 
 export function setupListener({ express, config }: InitializationContext) {
 	express.post(
-		config.webserverPaths.cacheRequests,
+		path.join(config.urlPath, 'api/cache'),
 		bodyParser.json({ limit: '10mb' }),
 		wrapAsyncReqHandler(assertIsContext, async (context: Context, req: Request, res: Response) => {
 			const { childSpan } = context;
