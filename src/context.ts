@@ -1,59 +1,7 @@
-import { ConfigContext } from '@secoya/context-helpers/config';
-import {
-	createRequestContextMiddleware,
-	ExpressContext,
-	RequestContextMiddlewareContext,
-} from '@secoya/context-helpers/express';
-import { assertIsLogContext, createLogContext, LogContext, RootLogContext } from '@secoya/context-helpers/log';
-import { ShutdownHandlingContext } from '@secoya/context-helpers/shutdown';
-import { StartupBaseContext } from '@secoya/context-helpers/startup';
-import {
-	assertIsTraceContext,
-	createTraceContext,
-	createTraceContextSpawnerContext,
-	SpanContext,
-	TracerContext,
-	TraceContext,
-	TraceContextSpawnerContext,
-} from '@secoya/context-helpers/trace';
+import { ConfigContext } from '@secoya/context-helpers/config.js';
 import { WebClient as SlackClient } from '@slack/web-api';
-import * as S3 from 'aws-sdk/clients/s3';
-import { Span } from 'opentracing';
-import { Config } from './config';
-
-type CommonContext = ConfigContext<Config> & S3Context & SlackContext & LogContext;
-
-export type SetupContext = CommonContext & StartupBaseContext & TracerContext & SpanContext & ExpressContext;
-
-export type InitializationContext = CommonContext &
-	RootLogContext &
-	ShutdownHandlingContext &
-	ExpressContext &
-	RequestContextMiddlewareContext &
-	TraceContext<InitializationContext> &
-	TraceContextSpawnerContext<Context>;
-
-export type Context = CommonContext & TraceContext<Context>;
-
-export function initializeContext(setupContext: SetupContext): InitializationContext {
-	return {
-		...setupContext,
-		...createLogContext(setupContext),
-		...createTraceContext(setupContext, (child: Span) => initializeContext({ ...setupContext, span: child })),
-		...createRequestContextMiddleware((child: Span) => createContext({ ...setupContext, span: child })),
-		...createTraceContextSpawnerContext(setupContext, (child: Span) =>
-			createContext({ ...setupContext, span: child }),
-		),
-	};
-}
-
-function createContext(setupContext: SetupContext): Context {
-	return {
-		...setupContext,
-		...createLogContext(setupContext),
-		...createTraceContext(setupContext, (child: Span) => createContext({ ...setupContext, span: child })),
-	};
-}
+import S3 from 'aws-sdk/clients/s3.js';
+import { Config } from 'src/config.js';
 
 export interface SlackContext {
 	readonly slack: SlackClient;
@@ -96,9 +44,4 @@ export function createS3Context({ config }: ConfigContext<Config>): S3Context {
 			},
 		}),
 	};
-}
-
-export function assertIsContext(obj: any): asserts obj is Context {
-	assertIsTraceContext(obj);
-	assertIsLogContext(obj);
 }

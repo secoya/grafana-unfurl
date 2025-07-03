@@ -1,17 +1,17 @@
+import { Context } from 'src/index.js';
 import { URL } from 'url';
-import { Context } from '../context';
 
 export interface GrafanaUrl {
 	readonly basePath: string;
+	readonly dashboardName: string;
+	readonly dashboardUid: string;
 	// tslint:disable-next-line: no-reserved-keywords
 	readonly from: string | null;
-	readonly to: string | null;
-	readonly dashboardUid: string;
-	readonly dashboardName: string;
 	readonly hostname: string;
 	readonly orgId: number;
-	readonly tz: string | null;
 	readonly protocol: string;
+	readonly to: string | null;
+	readonly tz: string | null;
 	readonly variables: {
 		readonly [key: string]: string;
 	};

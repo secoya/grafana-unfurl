@@ -1,25 +1,10 @@
 {
+	"extends": "@secoya/nodejs-build-tools/tsconfig.service.json",
 	"compilerOptions": {
-		"target": "es2018",
-		"module": "commonjs",
-		"lib": ["es2018"],
-		"outDir": "./dist",
-		"jsx": "react",
-		"importHelpers": true,
-		"resolveJsonModule": true,
-		"strict": true,
-		"declaration": false,
-		"sourceMap": true,
-		"skipLibCheck": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
-		"moduleResolution": "node",
 		"baseUrl": ".",
-		"paths": {
-			"*": ["typings/packages/*.d.ts"]
-		}
-	},
-	"include": ["src/index.ts", "typings/includes/*.d.ts"]
+		"lib": ["ES2020", "ES2022"],
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "Node"
+	}
 }

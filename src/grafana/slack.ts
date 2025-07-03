@@ -1,10 +1,10 @@
 import { ActionsBlock, ImageBlock, MessageAttachment, Option, SectionBlock, StaticSelect } from '@slack/web-api';
 import * as crypto from 'crypto';
+import { getDashboard, GrafanaDashboard } from 'src/grafana/api.js';
+import { createImage } from 'src/grafana/cache.js';
+import { parseUrl } from 'src/grafana/url.js';
+import { Context } from 'src/index.js';
 import { URL } from 'url';
-import { Context } from '../context';
-import { getDashboard, GrafanaDashboard } from './api';
-import { createImage } from './cache';
-import { parseUrl } from './url';
 
 interface PanelPrompt {
 	key: string;

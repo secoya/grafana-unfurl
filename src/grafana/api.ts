@@ -1,9 +1,8 @@
-import * as request from 'request-promise-native';
+import * as grafanaAPIDashboardResponseSchema from 'src/artifacts/schemas/GrafanaAPIDashboardResponse.json';
+import { GrafanaUrl } from 'src/grafana/url.js';
+import { Context } from 'src/index.js';
+import { getValidator } from 'src/utils.js';
 import { URL } from 'url';
-import * as grafanaAPIDashboardResponseSchema from '../artifacts/schemas/GrafanaAPIDashboardResponse.json';
-import { Context } from '../context';
-import { getValidator } from '../utils';
-import { GrafanaUrl } from './url';
 
 interface GrafanaAPIDashboardResponse {
 	dashboard: GrafanaDashboard;
@@ -11,8 +10,8 @@ interface GrafanaAPIDashboardResponse {
 
 export interface GrafanaDashboard {
 	id: number;
-	title: string;
 	panels: GrafanaPanel[];
+	title: string;
 }
 
 export interface GrafanaPanel {
@@ -23,15 +22,14 @@ const validateGrafanaAPIDashboardResponse = getValidator<GrafanaAPIDashboardResp
 	grafanaAPIDashboardResponseSchema,
 );
 
-export async function getDashboard({ config }: Context, url: GrafanaUrl): Promise<GrafanaDashboard> {
+export async function getDashboard({ config, fetchInternal }: Context, url: GrafanaUrl): Promise<GrafanaDashboard> {
 	const apiUrl = new URL(`api/dashboards/uid/${url.dashboardUid}`, config.grafana.url);
-	const data = await request({
-		json: true,
-		followRedirect: false,
-		headers: config.grafana.headers,
-		method: 'GET',
-		uri: apiUrl.toString(),
-	});
+	const data = await (
+		await fetchInternal(apiUrl.toString(), {
+			headers: config.grafana.headers,
+			method: 'GET',
+		})
+	).json();
 
 	if (!validateGrafanaAPIDashboardResponse(data)) {
 		throw new Error(

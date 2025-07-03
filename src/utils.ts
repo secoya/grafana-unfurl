@@ -1,12 +1,12 @@
-import * as ajv from 'ajv';
+import Ajv, { ErrorObject } from 'ajv';
 
 interface Validator<T> {
 	(data: any): data is T;
-	errors?: null | ajv.ErrorObject[];
+	errors?: null | ErrorObject[];
 }
 
 export function getValidator<T>(schema: object): Validator<T> {
-	const validate = new ajv().compile(schema);
+	const validate = new Ajv().compile(schema);
 	const validator: Validator<T> = (data: any): data is T => {
 		if (validate(data)) {
 			return true;

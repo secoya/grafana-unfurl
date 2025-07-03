@@ -1,16 +1,16 @@
-import { ConfigContext } from '@secoya/context-helpers/config';
+import { ConfigContext } from '@secoya/context-helpers/config.js';
 import { readFile } from 'fs';
-import { cloneDeep } from 'lodash';
+import lodash from 'lodash';
+import * as configFileSchema from 'src/artifacts/schemas/ConfigFile.json';
+import { getValidator } from 'src/utils.js';
 import { URL } from 'url';
-import * as yaml from 'yaml';
-import * as configFileSchema from './artifacts/schemas/ConfigFile.json';
-import { getValidator } from './utils';
+import yaml from 'yaml';
 
 function maskIfDefined(val: any | null | undefined): any | null | undefined {
 	return val === undefined ? undefined : val === null ? val : 'XXXX';
 }
 export function maskSensitiveConfig(config: Config): any {
-	const masked = cloneDeep(config);
+	const masked = lodash.cloneDeep(config);
 	masked.s3.accessKeyId = maskIfDefined(masked.s3.accessKeyId);
 	masked.s3.secretAccessKey = maskIfDefined(masked.s3.secretAccessKey);
 	masked.s3.urlSigning.accessKeyId = maskIfDefined(masked.s3.urlSigning.accessKeyId);
@@ -29,24 +29,23 @@ export type Duration = number & { [durationSym]: never };
 
 export type ConfigFile = OptionalKeysExceptIndexed<Config>;
 export interface Config {
-	urlPath: string;
 	grafana: {
-		headers: { [key: string]: string };
-		url: URL;
-		matchUrl: URL;
-		retention: Duration;
 		cleanupInterval: Duration;
+		headers: { [key: string]: string };
+		matchUrl: URL;
 		render: {
 			height: number;
 			width: number;
 		};
+		retention: Duration;
+		url: URL;
 	};
 	s3: {
+		accessKeyId?: string;
 		bucket: string;
-		root: string;
 		endpoint?: string;
 		region?: string;
-		accessKeyId?: string;
+		root: string;
 		secretAccessKey?: string;
 		urlSigning: {
 			accessKeyId: string;
@@ -59,6 +58,7 @@ export interface Config {
 		clientSecret: string;
 		clientSigningSecret: string;
 	};
+	urlPath: string;
 }
 
 type AsConfigFileValue<V> = V extends Duration

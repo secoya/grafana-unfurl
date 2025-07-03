@@ -1,4 +1,4 @@
-import { PlainTextElement, WebAPICallResult } from '@slack/web-api';
+import { PlainTextElement } from '@slack/web-api';
 export type EntityID = string;
 export type ChannelID = EntityID; // Has a 'C' prefix or 'D' for an IM channel
 export type SlackUserID = EntityID; // Has a 'U' prefix
@@ -17,24 +17,24 @@ export interface MessageReference extends MessageDestination {
 }
 
 export interface LinkShareEvent {
+	channel: ChannelID;
+	event_ts: Timestamp;
+	links: [
+		{
+			domain: string;
+			url: string;
+		},
+	];
+	message_ts: Timestamp;
 	// tslint:disable-next-line: no-reserved-keywords
 	type: 'link_shared';
 	user: SlackUserID;
-	channel: ChannelID;
-	message_ts: Timestamp;
-	links: [
-		{
-			url: string;
-			domain: string;
-		},
-	];
-	event_ts: Timestamp;
 }
 
 export interface InteractionRespondArguments extends Omit<ChatPostMessageArgumentsWithoutWebApi, 'channel'> {
+	delete_original?: boolean;
 	in_channel?: boolean;
 	replace_original?: boolean;
-	delete_original?: boolean;
 	response_type?: 'ephemeral';
 }
 
@@ -66,11 +66,11 @@ export interface InteractionPayload {
 		name: string;
 	};
 	container: {
+		app_unfurl_url?: string;
 		channel_id: ChannelID;
 		message_ts: Timestamp;
 		// tslint:disable-next-line: no-reserved-keywords
 		type: string;
-		app_unfurl_url?: string;
 	};
 	message?: {
 		text: string;

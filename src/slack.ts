@@ -1,24 +1,24 @@
-import { errorHandler } from '@secoya/context-helpers/express';
+import { errorHandler } from '@secoya/context-helpers/express.js';
 import { createEventAdapter } from '@slack/events-api';
-import SlackEventAdapter from '@slack/events-api/dist/adapter';
-import * as path from 'path';
+import SlackEventAdapter from '@slack/events-api/dist/adapter.js';
 import { createMessageAdapter } from '@slack/interactive-messages';
 import { LinkUnfurls } from '@slack/web-api';
 import { EventEmitter } from 'events';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AllHtmlEntities } from 'html-entities';
-import * as interactionPayloadSchema from './artifacts/schemas/InteractionPayload.json';
-import * as linkShareEventSchema from './artifacts/schemas/LinkShareEvent.json';
-import { assertIsContext, Context, InitializationContext } from './context';
-import { stackOrError } from './errors';
-import { unfurlGrafanaUrl } from './grafana/slack';
-import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from './slack-payloads';
-import { getValidator } from './utils';
+import * as path from 'path';
+import * as interactionPayloadSchema from 'src/artifacts/schemas/InteractionPayload.json';
+import * as linkShareEventSchema from 'src/artifacts/schemas/LinkShareEvent.json';
+import { stackOrError } from 'src/errors.js';
+import { unfurlGrafanaUrl } from 'src/grafana/slack.js';
+import { assertHasContext, assertIsContext, Context, StartupContext } from 'src/index.js';
+import { InteractionPayload, InteractionRespond, LinkShareEvent, MessageReference } from 'src/slack-payloads.js';
+import { getValidator } from 'src/utils.js';
 
 const validateLinkShareEvent = getValidator<LinkShareEvent>(linkShareEventSchema);
 const validateInteractionPayload = getValidator<InteractionPayload>(interactionPayloadSchema);
 
-export async function setupListeners({ config, express, log }: InitializationContext) {
+export async function setupListeners({ config, express, log }: StartupContext) {
 	log.verbose('setup slack event listener');
 	const events = createEventAdapter(config.slack.clientSigningSecret) as SlackEventAdapter & EventEmitter;
 	const interactions = createMessageAdapter(config.slack.clientSigningSecret);
@@ -68,6 +68,7 @@ function getLeapfrogRequestMiddleware(
 	function middleware(req: Request, _res: Response, next: NextFunction) {
 		try {
 			const key = getKey(JSON.parse(req.body));
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 			requests[key] = [req, setTimeout(() => delete requests[key], 3000)];
 			next();
 		} catch (e) {
@@ -80,13 +81,14 @@ function getLeapfrogRequestMiddleware(
 			throw new Error(`LeapfrogReq: Unable to find request for key ${key}`);
 		}
 		const [req, timeout] = requests[key];
+		// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 		delete requests[key];
 		clearTimeout(timeout);
 		return req;
 	}
 	function retrieveContext(key: string): Context {
 		const req = retrieveRequest(key);
-		assertIsContext(req.context);
+		assertHasContext(req);
 		return req.context;
 	}
 	return [middleware, retrieveContext, retrieveRequest];
@@ -96,7 +98,7 @@ interface PanelPrompt extends MessageReference {
 	encodedUrl: string;
 }
 const panelPrompts: { [key: string]: PanelPrompt | undefined } = {};
-async function handleLinks({ childSpan, slack, log }: Context, event: LinkShareEvent): Promise<void> {
+async function handleLinks({ trace, slack, log }: Context, event: LinkShareEvent): Promise<void> {
 	try {
 		log.debug('Link shared event received', { linkShare: event });
 		if (!validateLinkShareEvent(event)) {
@@ -109,7 +111,7 @@ async function handleLinks({ childSpan, slack, log }: Context, event: LinkShareE
 		for (const { url: encodedUrl } of event.links) {
 			try {
 				const rawUrl = AllHtmlEntities.decode(encodedUrl);
-				const [unfurl, panelPrompt] = await childSpan(unfurlGrafanaUrl)(rawUrl);
+				const [unfurl, panelPrompt] = await trace(unfurlGrafanaUrl, rawUrl);
 				if (unfurl) {
 					unfurls[encodedUrl] = unfurl;
 				}
@@ -145,7 +147,7 @@ async function handleLinks({ childSpan, slack, log }: Context, event: LinkShareE
 }
 
 function handlePanelSelection(
-	{ childSpan, slack, log }: Context,
+	{ trace, slack, log }: Context,
 	payload: InteractionPayload,
 	respond: InteractionRespond,
 ): false {
@@ -163,7 +165,7 @@ function handlePanelSelection(
 				);
 			}
 			if (payload.actions.length !== 1) {
-				throw new Error(`Received multiple actions in payload for panel_select`);
+				throw new Error('Received multiple actions in payload for panel_select');
 			}
 			const [action] = payload.actions;
 			if (!('selected_option' in action)) {
@@ -181,8 +183,9 @@ function handlePanelSelection(
 				response_type: 'ephemeral',
 			});
 			const rawUrl = AllHtmlEntities.decode(panelPrompt.encodedUrl);
-			const [unfurl] = await childSpan(unfurlGrafanaUrl)(rawUrl, panelId);
+			const [unfurl] = await trace(unfurlGrafanaUrl, rawUrl, panelId);
 			if (unfurl) {
+				// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 				delete panelPrompts[key];
 				const actions = [
 					respond({
@@ -207,8 +210,8 @@ function handlePanelSelection(
 					response_type: 'ephemeral',
 					text: stackOrError(e),
 				});
-			} catch (e) {
-				log.error(e);
+			} catch (e2) {
+				log.error(e2);
 			}
 		}
 	})();
@@ -227,7 +230,7 @@ function handlePanelSelectorRemoval({ log }: Context, payload: InteractionPayloa
 				);
 			}
 			if (payload.actions.length !== 1) {
-				throw new Error(`Received multiple actions in payload for panel_select_remove`);
+				throw new Error('Received multiple actions in payload for panel_select_remove');
 			}
 			await respond({
 				delete_original: true,
@@ -239,6 +242,7 @@ function handlePanelSelectorRemoval({ log }: Context, payload: InteractionPayloa
 			if (!panelPrompt) {
 				throw new Error(`Unable to find panel prompt with key ${key}`);
 			}
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 			delete panelPrompts[key];
 		} catch (e) {
 			log.error(e);

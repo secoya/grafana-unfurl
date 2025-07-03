@@ -1,8 +1,8 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env -S node --loader ts-node/esm
 import { docopt } from 'docopt';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as TJS from 'typescript-json-schema';
+import fs from 'node:fs/promises';
+import path from 'path';
+import TJS from 'typescript-json-schema';
 
 const doc = `Generate a GraphQL schema
 Usage:
@@ -44,17 +44,7 @@ export async function generateSchemas(
 			const schema = generator.getSchemaForSymbol(schemaSymbol);
 			const manifest = JSON.stringify(schema, null, 2);
 			if (!previousManifests || manifest !== previousManifests[schemaSymbol]) {
-				writePromises.push(
-					new Promise(async (resolve, reject) => {
-						fs.writeFile(manifestPath, manifest, (err) => {
-							if (err) {
-								reject(err);
-							} else {
-								resolve();
-							}
-						});
-					}),
-				);
+				writePromises.push(fs.writeFile(manifestPath, manifest));
 			}
 			newManifests[schemaSymbol] = manifest;
 		}
@@ -62,11 +52,11 @@ export async function generateSchemas(
 		return newManifests;
 	} catch (e) {
 		// tslint:disable-next-line: no-console
+		// eslint-disable-next-line no-console
 		console.error(e);
 	}
 	return null;
 }
-if (require.main === module) {
-	const params = docopt(doc, {});
-	generateSchemas(params['<output>'], params['<tsconfig>'], params['<symbols>']);
-}
+
+const params = docopt(doc, {});
+generateSchemas(params['<output>'], params['<tsconfig>'], params['<symbols>']);
