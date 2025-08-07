@@ -1,4 +1,5 @@
 import {
+	ContextCreator,
 	newRuntimeContextFactory,
 	newStartupContextFactory,
 	newUntracedContextFactory,
@@ -66,8 +67,8 @@ export async function setupBaseContext(rootContext: RootContextFor<typeof startu
 
 startup(startupOptions, async (rootContext) => {
 	const baseContext = await setupBaseContext(rootContext);
-	const createRuntimeContext = newRuntimeContextFactory(baseContext).add(
-		pluckKeys('s3', 's3UrlSigning', 'slack'),
+	const createRuntimeContext: ContextCreator<Context> = newRuntimeContextFactory(baseContext).add(
+		pluckKeys('s3', 's3UrlSigning', 'slack', 'config'),
 	).create;
 	const startupContext: StartupContext = newStartupContextFactory(
 		baseContext,
