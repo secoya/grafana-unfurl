@@ -1,8 +1,8 @@
 #!/usr/bin/env -S node --loader ts-node/esm
+import TJS from '@secoya/typescript-json-schema/typescript-json-schema.js';
 import { docopt } from 'docopt';
 import fs from 'node:fs/promises';
 import path from 'path';
-import TJS from 'typescript-json-schema';
 
 const doc = `Generate a GraphQL schema
 Usage:
